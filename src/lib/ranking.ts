@@ -1,0 +1,65 @@
+import type { Student } from "./types";
+
+/**
+ * Generate a short unique id for a student row.
+ * Uses crypto.randomUUID when available, falls back to a Math.random id.
+ */
+export function uid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2, 11);
+}
+
+/**
+ * Validate a single student row.
+ * - name must be non-empty
+ * - score must be a number in [0, 100]
+ * Returns a NEW object with isValid + error filled in.
+ */
+export function validateStudent(s: Student): Student {
+  const trimmed = s.name?.trim() ?? "";
+  if (!trimmed) {
+    return { ...s, isValid: false, error: "Nama kosong" };
+  }
+  if (Number.isNaN(s.score)) {
+    return { ...s, isValid: false, error: "Nilai bukan angka" };
+  }
+  if (s.score < 0 || s.score > 100) {
+    return { ...s, isValid: false, error: "Nilai harus 0–100" };
+  }
+  return { ...s, isValid: true, error: undefined };
+}
+
+/**
+ * Apply dense ranking by score (descending).
+ * Example scores: 95, 95, 90, 80 → ranks: 1, 1, 2, 3
+ * Invalid rows still receive a rank of 0 (pinned at the bottom of the table).
+ */
+export function applyDenseRanking(students: Student[]): Student[] {
+  const valid = students.filter((s) => s.isValid);
+  const invalid = students.filter((s) => !s.isValid);
+
+  // Sort valid rows by score desc
+  const sorted = [...valid].sort((a, b) => b.score - a.score);
+
+  let currentRank = 0;
+  let lastScore: number | null = null;
+  const ranked = sorted.map((s) => {
+    if (lastScore === null || s.score !== lastScore) {
+      currentRank += 1;
+      lastScore = s.score;
+    }
+    return { ...s, rank: currentRank };
+  });
+
+  return [...ranked, ...invalid.map((s) => ({ ...s, rank: 0 }))];
+}
+
+/**
+ * Convenience: validate every row, then re-apply ranking.
+ * Use this anytime data changes.
+ */
+export function recompute(students: Student[]): Student[] {
+  return applyDenseRanking(students.map(validateStudent));
+}
