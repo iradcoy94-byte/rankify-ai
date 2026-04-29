@@ -10,7 +10,9 @@ export interface Student {
   name: string;
   /** Score 0–100 (editable). Stored as number; NaN means empty. */
   score: number;
-  /** Dense rank, computed (1,1,2,3...) */
+  /** Class label like "XII IPA 1" — optional, editable, used for filtering */
+  className?: string;
+  /** Dense rank, computed per class (1,1,2,3...) */
   rank: number;
   /** Result of validation pass */
   isValid: boolean;

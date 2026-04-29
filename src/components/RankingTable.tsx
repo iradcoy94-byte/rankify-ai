@@ -17,17 +17,18 @@ interface RankingTableProps {
   students: Student[];
   onUpdate: (
     id: string,
-    patch: Partial<Pick<Student, "name" | "score">>,
+    patch: Partial<Pick<Student, "name" | "score" | "className">>,
   ) => void;
   onRemove: (id: string) => void;
   onAdd: () => void;
 }
 
-type SortDir = "rank" | "score-asc" | "score-desc" | "name";
+type SortKey = "rank" | "name" | "score" | "class";
+type SortDir = "asc" | "desc";
 
 /**
- * Editable ranking table with sorting, inline edit, and validation highlight.
- * Default sort = by computed dense rank.
+ * Editable ranking table with column-toggle sorting (asc ⇄ desc), inline
+ * edit, and validation highlight. Default sort = by computed dense rank.
  */
 export function RankingTable({
   students,
@@ -35,29 +36,53 @@ export function RankingTable({
   onRemove,
   onAdd,
 }: RankingTableProps) {
-  const [sort, setSort] = useState<SortDir>("rank");
+  const [sortKey, setSortKey] = useState<SortKey>("rank");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  /** Click a header: toggle dir if same column, else switch column with sane default. */
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      // Sensible defaults: rank ascending (1 first), score descending (high first), name A→Z
+      setSortDir(key === "score" ? "desc" : "asc");
+    }
+  };
 
   const sorted = useMemo(() => {
     const list = [...students];
-    switch (sort) {
-      case "score-asc":
-        return list.sort((a, b) => (a.score || 0) - (b.score || 0));
-      case "score-desc":
-        return list.sort((a, b) => (b.score || 0) - (a.score || 0));
-      case "name":
-        return list.sort((a, b) => a.name.localeCompare(b.name));
-      default:
-        // by rank, invalid (rank 0) at bottom
-        return list.sort((a, b) => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    list.sort((a, b) => {
+      switch (sortKey) {
+        case "name":
+          return a.name.localeCompare(b.name, "id") * dir;
+        case "score": {
+          const av = Number.isNaN(a.score) ? -Infinity : a.score;
+          const bv = Number.isNaN(b.score) ? -Infinity : b.score;
+          return (av - bv) * dir;
+        }
+        case "class":
+          return (a.className ?? "").localeCompare(b.className ?? "", "id") * dir;
+        case "rank":
+        default: {
+          // invalid (rank 0) always at the bottom regardless of direction
           if (a.rank === 0 && b.rank !== 0) return 1;
           if (b.rank === 0 && a.rank !== 0) return -1;
-          return a.rank - b.rank;
-        });
-    }
-  }, [students, sort]);
+          return (a.rank - b.rank) * dir;
+        }
+      }
+    });
+    return list;
+  }, [students, sortKey, sortDir]);
 
-  const toggleScoreSort = () => {
-    setSort((s) => (s === "score-desc" ? "score-asc" : "score-desc"));
+  const SortIcon = ({ active }: { active: boolean }) => {
+    if (!active) return <ArrowUpDown className="h-3 w-3" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="h-3 w-3" />
+    ) : (
+      <ArrowDown className="h-3 w-3" />
+    );
   };
 
   return (
@@ -80,33 +105,34 @@ export function RankingTable({
             <tr>
               <th className="w-20 px-5 py-3">
                 <button
-                  onClick={() => setSort("rank")}
+                  onClick={() => handleSort("rank")}
                   className="inline-flex items-center gap-1 hover:text-foreground"
                 >
-                  Rank <ArrowUpDown className="h-3 w-3" />
+                  Rank <SortIcon active={sortKey === "rank"} />
+                </button>
+              </th>
+              <th className="w-32 px-3 py-3">
+                <button
+                  onClick={() => handleSort("class")}
+                  className="inline-flex items-center gap-1 hover:text-foreground"
+                >
+                  Kelas <SortIcon active={sortKey === "class"} />
                 </button>
               </th>
               <th className="px-5 py-3">
                 <button
-                  onClick={() => setSort("name")}
+                  onClick={() => handleSort("name")}
                   className="inline-flex items-center gap-1 hover:text-foreground"
                 >
-                  Nama <ArrowUpDown className="h-3 w-3" />
+                  Nama <SortIcon active={sortKey === "name"} />
                 </button>
               </th>
-              <th className="w-40 px-5 py-3">
+              <th className="w-32 px-5 py-3">
                 <button
-                  onClick={toggleScoreSort}
+                  onClick={() => handleSort("score")}
                   className="inline-flex items-center gap-1 hover:text-foreground"
                 >
-                  Nilai{" "}
-                  {sort === "score-asc" ? (
-                    <ArrowUp className="h-3 w-3" />
-                  ) : sort === "score-desc" ? (
-                    <ArrowDown className="h-3 w-3" />
-                  ) : (
-                    <ArrowUpDown className="h-3 w-3" />
-                  )}
+                  Nilai <SortIcon active={sortKey === "score"} />
                 </button>
               </th>
               <th className="w-32 px-5 py-3">Status</th>
@@ -132,6 +158,16 @@ export function RankingTable({
                   </td>
                   <td className="px-3 py-2">
                     <Input
+                      value={s.className ?? ""}
+                      onChange={(e) =>
+                        onUpdate(s.id, { className: e.target.value })
+                      }
+                      placeholder="cth: XII IPA 1"
+                      className="h-9 w-28 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <Input
                       value={s.name}
                       onChange={(e) =>
                         onUpdate(s.id, { name: e.target.value })
@@ -153,7 +189,7 @@ export function RankingTable({
                         });
                       }}
                       placeholder="0–100"
-                      className={`h-9 w-28 font-mono border-transparent bg-transparent focus:border-primary focus:bg-background ${
+                      className={`h-9 w-24 font-mono border-transparent bg-transparent focus:border-primary focus:bg-background ${
                         !s.isValid ? "text-destructive" : ""
                       }`}
                     />
@@ -185,7 +221,7 @@ export function RankingTable({
             {sorted.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-5 py-12 text-center text-sm text-muted-foreground"
                 >
                   Belum ada data. Upload gambar atau tambah baris manual.

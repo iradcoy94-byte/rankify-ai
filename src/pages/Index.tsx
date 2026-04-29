@@ -1,6 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, AlertTriangle, Users, TrendingUp, RefreshCw, Trophy } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Users,
+  TrendingUp,
+  Trophy,
+  Filter,
+} from "lucide-react";
 import { Header } from "@/components/Header";
 import { Uploader } from "@/components/Uploader";
 import { Podium } from "@/components/Podium";
@@ -8,41 +15,79 @@ import { RankingTable } from "@/components/RankingTable";
 import { ScoreChart } from "@/components/ScoreChart";
 import { AIAssistant } from "@/components/AIAssistant";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useStudents } from "@/hooks/useStudents";
 import { parseOcrText } from "@/lib/parser";
+import { recompute } from "@/lib/ranking";
 import { toast } from "sonner";
+
+const ALL = "__all__";
+const NONE = "__none__";
 
 /**
  * Main page composing the Rankify.AI experience:
- * 1. Hero + uploader
- * 2. Stats / leaderboard / table
+ * 1. Hero + uploader (each upload APPENDS to the dataset)
+ * 2. Class filter + leaderboard + table for the selected class
  * 3. Floating AI assistant
- *
- * All business logic lives in hooks/services — this file is a thin
- * orchestration layer.
  */
 const Index = () => {
-  const { students, stats, replaceAll, updateField, removeRow, addRow, clear } =
-    useStudents();
-  const [hasParsed, setHasParsed] = useState(false);
+  const {
+    students,
+    stats,
+    classes,
+    appendStudents,
+    updateField,
+    removeRow,
+    addRow,
+    clear,
+  } = useStudents();
+  const [classFilter, setClassFilter] = useState<string>(ALL);
 
-  /** Wire OCR result → flexible parser → state */
+  /** Wire OCR result → flexible parser → APPEND to existing data. */
   const handleExtracted = (text: string) => {
     const parsed = parseOcrText(text);
     if (parsed.length === 0) {
       toast.warning(
         "Tidak menemukan baris 'Nama Nilai'. Coba tambah baris manual.",
       );
+      return;
     }
-    replaceAll(parsed);
-    setHasParsed(true);
-    // Smooth scroll to ranking
+    appendStudents(parsed);
+    toast.success(`${parsed.length} siswa ditambahkan`);
     requestAnimationFrame(() => {
       document
         .getElementById("ranking")
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   };
+
+  /**
+   * Filtered view of the dataset for the active class. Ranks are recomputed
+   * for the SUBSET so the leaderboard reflects rankings within that class
+   * (even though stored ranks are already per-class).
+   */
+  const filtered = useMemo(() => {
+    if (classFilter === ALL) return students;
+    if (classFilter === NONE)
+      return recompute(
+        students.filter((s) => !s.className || !s.className.trim()),
+      );
+    return recompute(
+      students.filter(
+        (s) => (s.className ?? "").trim().toUpperCase() === classFilter,
+      ),
+    );
+  }, [students, classFilter]);
+
+  const hasUnclassified = students.some(
+    (s) => !s.className || !s.className.trim(),
+  );
 
   return (
     <main className="relative min-h-screen pb-32">
@@ -65,17 +110,12 @@ const Index = () => {
             <span className="text-gradient-primary">Dapat leaderboard.</span>
           </h2>
           <p className="mt-5 max-w-xl text-base text-muted-foreground md:text-lg">
-            Rankify.AI menggunakan OCR + AI untuk mengekstrak nama dan nilai
-            siswa dari gambar, memvalidasinya, dan menyusun ranking dengan
-            sistem <strong className="text-foreground">dense ranking</strong>{" "}
-            (1, 1, 2, 3).
+            Rankify.AI menggunakan OCR + AI untuk mengekstrak nama, kelas, dan
+            nilai siswa dari gambar atau foto kamera, lalu menyusun ranking
+            per kelas dengan{" "}
+            <strong className="text-foreground">dense ranking</strong> (1, 1,
+            2, 3).
           </p>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <FeaturePill icon={<CheckCircle2 className="h-3.5 w-3.5" />} text="Validasi nilai 0–100" />
-            <FeaturePill icon={<RefreshCw className="h-3.5 w-3.5" />} text="Edit inline real-time" />
-            <FeaturePill icon={<TrendingUp className="h-3.5 w-3.5" />} text="Insight AI" />
-          </div>
         </motion.div>
 
         <motion.div
@@ -93,32 +133,67 @@ const Index = () => {
           <div>
             <h3 className="text-3xl font-bold">Leaderboard Kelas</h3>
             <p className="text-sm text-muted-foreground">
-              {hasParsed || students.length > 0
+              {students.length > 0
                 ? "Edit data di tabel untuk memperbaiki hasil OCR."
-                : "Upload gambar untuk melihat ranking di sini."}
+                : "Upload gambar atau ambil foto untuk melihat ranking."}
             </p>
           </div>
           {students.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
+              {/* Class filter */}
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-card/60 px-2 py-1 backdrop-blur">
+                <Filter className="ml-1 h-3.5 w-3.5 text-primary" />
+                <Select value={classFilter} onValueChange={setClassFilter}>
+                  <SelectTrigger className="h-8 w-[160px] border-0 bg-transparent text-xs focus:ring-0">
+                    <SelectValue placeholder="Filter kelas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>Semua kelas</SelectItem>
+                    {classes.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                    {hasUnclassified && (
+                      <SelectItem value={NONE}>Tanpa kelas</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <StatChip
                 icon={<Users className="h-3.5 w-3.5" />}
                 label="Siswa"
-                value={stats.total}
+                value={
+                  classFilter === ALL ? stats.total : filtered.length
+                }
               />
               <StatChip
                 icon={<CheckCircle2 className="h-3.5 w-3.5 text-success" />}
                 label="Valid"
-                value={stats.valid}
+                value={
+                  classFilter === ALL
+                    ? stats.valid
+                    : filtered.filter((s) => s.isValid).length
+                }
               />
               <StatChip
                 icon={<AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
                 label="Invalid"
-                value={stats.invalid}
+                value={
+                  classFilter === ALL
+                    ? stats.invalid
+                    : filtered.filter((s) => !s.isValid).length
+                }
               />
               <StatChip
                 icon={<TrendingUp className="h-3.5 w-3.5 text-primary" />}
                 label="Rata-rata"
-                value={stats.avg}
+                value={
+                  classFilter === ALL
+                    ? stats.avg
+                    : avgOf(filtered)
+                }
               />
               <Button variant="outline" size="sm" onClick={clear}>
                 Reset
@@ -127,46 +202,38 @@ const Index = () => {
           )}
         </div>
 
-        <Podium students={students} />
+        <Podium students={filtered} />
 
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           <RankingTable
-            students={students}
+            students={filtered}
             onUpdate={updateField}
             onRemove={removeRow}
-            onAdd={addRow}
+            onAdd={() => addRow(classFilter !== ALL && classFilter !== NONE ? classFilter : undefined)}
           />
 
           <div className="rounded-2xl border border-border bg-gradient-card p-5 shadow-card-soft">
             <h4 className="mb-1 font-semibold">Distribusi Nilai</h4>
             <p className="mb-3 text-xs text-muted-foreground">
-              Hanya menampilkan baris yang valid.
+              {classFilter === ALL
+                ? "Semua siswa valid."
+                : `Kelas ${classFilter === NONE ? "Tanpa kelas" : classFilter}`}
             </p>
-            <ScoreChart students={students} />
+            <ScoreChart students={filtered} />
           </div>
         </div>
       </section>
 
-      <AIAssistant students={students} />
+      <AIAssistant students={filtered} />
     </main>
   );
 };
 
-/* ---------- Small inline UI atoms ---------- */
-
-function FeaturePill({
-  icon,
-  text,
-}: {
-  icon: React.ReactNode;
-  text: string;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-secondary/40 px-3 py-1.5 text-xs text-foreground/80">
-      <span className="text-primary">{icon}</span>
-      {text}
-    </span>
-  );
+/** Mean of valid scores, rounded to 1 decimal */
+function avgOf(list: { score: number; isValid: boolean }[]) {
+  const valid = list.filter((s) => s.isValid);
+  if (valid.length === 0) return 0;
+  return Math.round((valid.reduce((a, b) => a + b.score, 0) / valid.length) * 10) / 10;
 }
 
 function StatChip({
