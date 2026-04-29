@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
           students
             .map(
               (s: any) =>
-                `Rank ${s.rank}. ${s.name} - ${s.score}${
+                `[${s.className || "Tanpa Kelas"}] Rank ${s.rank}. ${s.name} - ${s.score}${
                   s.isValid ? "" : " (INVALID)"
                 }`,
             )
