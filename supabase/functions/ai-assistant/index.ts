@@ -15,7 +15,19 @@ Deno.serve(async (req) => {
   try {
     const { messages, students } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY missing in edge function env");
+      return new Response(
+        JSON.stringify({
+          error:
+            "AI belum dikonfigurasi. Aktifkan Lovable AI di Cloud settings.",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
     // Build context summary of student data so AI can analyze it
     const context =
