@@ -122,8 +122,7 @@ export function AIAssistant({ students }: AssistantProps) {
               {messages.length === 0 && (
                 <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
                   <Sparkles className="mb-2 h-4 w-4 text-primary" />
-                  Tanyakan apa saja tentang nilai kelas, atau gunakan prompt
-                  cepat di bawah.
+                  Tanyakan apa saja yang tidak kalian mengerti dari materi tersebut.
                 </div>
               )}
               {messages.map((m, i) => (
