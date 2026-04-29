@@ -32,26 +32,36 @@ export function validateStudent(s: Student): Student {
 }
 
 /**
- * Apply dense ranking by score (descending).
- * Example scores: 95, 95, 90, 80 → ranks: 1, 1, 2, 3
+ * Apply dense ranking by score (descending), grouped per class.
+ * Students without a class share a single "Tanpa Kelas" group.
+ * Example scores within a class: 95, 95, 90, 80 → ranks: 1, 1, 2, 3
  * Invalid rows still receive a rank of 0 (pinned at the bottom of the table).
  */
 export function applyDenseRanking(students: Student[]): Student[] {
   const valid = students.filter((s) => s.isValid);
   const invalid = students.filter((s) => !s.isValid);
 
-  // Sort valid rows by score desc
-  const sorted = [...valid].sort((a, b) => b.score - a.score);
+  // Group valid students by class
+  const groups = new Map<string, Student[]>();
+  for (const s of valid) {
+    const key = (s.className ?? "").trim() || "__none__";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(s);
+  }
 
-  let currentRank = 0;
-  let lastScore: number | null = null;
-  const ranked = sorted.map((s) => {
-    if (lastScore === null || s.score !== lastScore) {
-      currentRank += 1;
-      lastScore = s.score;
+  const ranked: Student[] = [];
+  for (const list of groups.values()) {
+    const sorted = [...list].sort((a, b) => b.score - a.score);
+    let currentRank = 0;
+    let lastScore: number | null = null;
+    for (const s of sorted) {
+      if (lastScore === null || s.score !== lastScore) {
+        currentRank += 1;
+        lastScore = s.score;
+      }
+      ranked.push({ ...s, rank: currentRank });
     }
-    return { ...s, rank: currentRank };
-  });
+  }
 
   return [...ranked, ...invalid.map((s) => ({ ...s, rank: 0 }))];
 }
