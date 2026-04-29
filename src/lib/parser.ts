@@ -89,20 +89,12 @@ export function parseOcrText(raw: string, defaultClass?: string): Student[] {
   for (const original of lines) {
     const line = original.replace(LEADING_NUM, "");
 
-    // 1) Pure class header line — update context, no student row produced.
+    // 1) Pure class header line — update context, skip producing a student.
+    //    Examples: "Kelas: XII IPA 1", "XII IPA 1", "X-IPA-2"
     const headerClass = detectClassLabel(line);
-    if (headerClass && !/\d/.test(line.replace(/^kelas[:\-\s]*/i, "").replace(/^[VIX]+/i, ""))) {
-      // Heuristic: only treat as header when the line doesn't also carry a score
-      // (we already stripped the class numerals above to test for trailing digits).
-      const numbers = [...line.matchAll(/\d+(?:[.,]\d+)?/g)];
-      const hasScore = numbers.some((m) => {
-        const v = Number(m[0].replace(",", "."));
-        return v >= 0 && v <= 100 && (m.index ?? 0) > line.length / 2;
-      });
-      if (!hasScore) {
-        activeClass = headerClass;
-        continue;
-      }
+    if (headerClass) {
+      activeClass = headerClass;
+      continue;
     }
 
     // 2) Find ALL numbers on the line, pick the last one as the score.
