@@ -9,14 +9,25 @@ import type { Student } from "@/lib/types";
 export function useStudents(initial: Student[] = []) {
   const [students, setStudents] = useState<Student[]>(() => recompute(initial));
 
-  /** Replace the whole list (e.g. after OCR parsing) */
+  /** Replace the whole list (rarely used; prefer appendStudents) */
   const replaceAll = useCallback((next: Student[]) => {
     setStudents(recompute(next));
   }, []);
 
+  /**
+   * Append new rows to the existing list (default behaviour for OCR / camera).
+   * Existing data is preserved; ranking is recomputed across all rows.
+   */
+  const appendStudents = useCallback((incoming: Student[]) => {
+    setStudents((prev) => recompute([...prev, ...incoming]));
+  }, []);
+
   /** Update a single field on a row */
   const updateField = useCallback(
-    (id: string, patch: Partial<Pick<Student, "name" | "score">>) => {
+    (
+      id: string,
+      patch: Partial<Pick<Student, "name" | "score" | "className">>,
+    ) => {
       setStudents((prev) =>
         recompute(
           prev.map((s) => (s.id === id ? validateStudent({ ...s, ...patch }) : s)),
@@ -31,12 +42,19 @@ export function useStudents(initial: Student[] = []) {
     setStudents((prev) => recompute(prev.filter((s) => s.id !== id)));
   }, []);
 
-  /** Add an empty row for manual entry */
-  const addRow = useCallback(() => {
+  /** Add an empty row for manual entry, optionally pre-filled with a class */
+  const addRow = useCallback((className?: string) => {
     setStudents((prev) =>
       recompute([
         ...prev,
-        { id: uid(), name: "", score: NaN, rank: 0, isValid: false },
+        {
+          id: uid(),
+          name: "",
+          score: NaN,
+          className,
+          rank: 0,
+          isValid: false,
+        },
       ]),
     );
   }, []);
@@ -44,7 +62,7 @@ export function useStudents(initial: Student[] = []) {
   /** Reset everything */
   const clear = useCallback(() => setStudents([]), []);
 
-  /** Quick stats for header chips */
+  /** Quick stats for header chips (computed across ALL students) */
   const stats = useMemo(() => {
     const valid = students.filter((s) => s.isValid);
     const avg =
@@ -59,10 +77,22 @@ export function useStudents(initial: Student[] = []) {
     };
   }, [students]);
 
+  /** Distinct class labels present in the data, sorted alphabetically. */
+  const classes = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of students) {
+      const c = (s.className ?? "").trim();
+      if (c) set.add(c);
+    }
+    return Array.from(set).sort();
+  }, [students]);
+
   return {
     students,
     stats,
+    classes,
     replaceAll,
+    appendStudents,
     updateField,
     removeRow,
     addRow,
