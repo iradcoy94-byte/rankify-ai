@@ -106,15 +106,11 @@ const Index = () => {
             Ranking siswa otomatis dalam 3 langkah
           </span>
           <h2 className="text-balance text-5xl font-bold leading-[1.05] tracking-tight md:text-6xl">
-            Foto daftar nilai.{" "}
-            <span className="text-gradient-primary">Dapat leaderboard.</span>
+            Ranking udah keluar.{" "}
+            <span className="text-gradient-primary">Lo di mana?</span>
           </h2>
-          <p className="mt-5 max-w-xl text-base text-muted-foreground md:text-lg">
-            Rankify.AI menggunakan OCR + AI untuk mengekstrak nama, kelas, dan
-            nilai siswa dari gambar atau foto kamera, lalu menyusun ranking
-            per kelas dengan{" "}
-            <strong className="text-foreground">dense ranking</strong> (1, 1,
-            2, 3).
+          <p className="mt-5 max-w-xl text-justify text-sm text-muted-foreground md:text-base leading-relaxed">
+            Rankify.AI adalah platform berbasis web yang mengubah gambar data nilai siswa menjadi peringkat kelas secara otomatis menggunakan teknologi OCR dan AI. Dilengkapi dengan fitur edit manual, validasi data, leaderboard interaktif, serta AI Assistant untuk analisis pembelajaran.
           </p>
         </motion.div>
 
