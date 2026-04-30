@@ -131,7 +131,7 @@ const Index = () => {
             <p className="text-sm text-muted-foreground">
               {students.length > 0
                 ? "Edit data di tabel untuk memperbaiki hasil OCR."
-                : "Upload gambar atau ambil foto untuk melihat ranking."}
+                : "Usaha tidak pernah menghianati hasil."}
             </p>
           </div>
           {students.length > 0 && (
