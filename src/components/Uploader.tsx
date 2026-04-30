@@ -124,11 +124,11 @@ export function Uploader({ onTextExtracted }: UploaderProps) {
               </div>
               <p className="mb-1 text-lg font-semibold">
                 {isDragActive
-                  ? "Lepaskan file di sini"
-                  : "Drag & drop foto daftar nilai"}
+                  ? "Lepaskan File Di Sini"
+                  : "Drag & Drop Foto Daftar Nilai"}
               </p>
               <p className="text-sm text-muted-foreground">
-                atau klik untuk memilih · JPG / PNG
+                atau klik di sini untuk memilih file JPG/PNG
               </p>
             </div>
 
@@ -153,8 +153,8 @@ export function Uploader({ onTextExtracted }: UploaderProps) {
               </Button>
             </div>
             <p className="text-center text-xs text-muted-foreground">
-              Setiap upload akan <strong className="text-foreground">menambah</strong>{" "}
-              data, bukan menggantinya.
+              Pastikan upload file yang <strong className="text-foreground">jelas</strong>{" "}
+              agar tidak ada kekeliruan.
             </p>
           </motion.div>
         ) : (
