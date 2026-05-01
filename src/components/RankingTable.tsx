@@ -205,14 +205,17 @@ export function RankingTable({
                     />
                   </td>
                   <td className="px-5 py-3">
-                    {s.isValid ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-xs font-medium text-success">
-                        <Check className="h-3 w-3" /> Valid
+                    {!s.isValid ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                        —
+                      </span>
+                    ) : s.score >= PASS_THRESHOLD ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
+                        <CheckCircle2 className="h-3 w-3" /> Tuntas
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-medium text-destructive">
-                        <AlertTriangle className="h-3 w-3" />
-                        {s.error ?? "Invalid"}
+                      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive">
+                        <XCircle className="h-3 w-3" /> Belum Tuntas
                       </span>
                     )}
                   </td>
