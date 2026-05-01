@@ -6,12 +6,15 @@ import {
   ArrowDown,
   Trash2,
   Plus,
-  AlertTriangle,
-  Check,
+  XCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Student } from "@/lib/types";
+
+/** Threshold KKM: ≥ 68 → Tuntas, < 68 → Belum Tuntas */
+const PASS_THRESHOLD = 68;
 
 interface RankingTableProps {
   students: Student[];
@@ -21,6 +24,8 @@ interface RankingTableProps {
   ) => void;
   onRemove: (id: string) => void;
   onAdd: () => void;
+  /** Hide the "Kelas" column (used when viewing a single class). */
+  hideClass?: boolean;
 }
 
 type SortKey = "rank" | "name" | "score" | "class";
@@ -35,6 +40,7 @@ export function RankingTable({
   onUpdate,
   onRemove,
   onAdd,
+  hideClass = false,
 }: RankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -111,14 +117,16 @@ export function RankingTable({
                   Rank <SortIcon active={sortKey === "rank"} />
                 </button>
               </th>
-              <th className="w-32 px-3 py-3">
-                <button
-                  onClick={() => handleSort("class")}
-                  className="inline-flex items-center gap-1 hover:text-foreground"
-                >
-                  Kelas <SortIcon active={sortKey === "class"} />
-                </button>
-              </th>
+              {!hideClass && (
+                <th className="w-32 px-3 py-3">
+                  <button
+                    onClick={() => handleSort("class")}
+                    className="inline-flex items-center gap-1 hover:text-foreground"
+                  >
+                    Kelas <SortIcon active={sortKey === "class"} />
+                  </button>
+                </th>
+              )}
               <th className="px-5 py-3">
                 <button
                   onClick={() => handleSort("name")}
@@ -156,16 +164,18 @@ export function RankingTable({
                   <td className="px-5 py-3">
                     <RankBadge rank={s.rank} valid={s.isValid} />
                   </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      value={s.className ?? ""}
-                      onChange={(e) =>
-                        onUpdate(s.id, { className: e.target.value })
-                      }
-                      placeholder="cth: XII IPA 1"
-                      className="h-9 w-28 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
-                    />
-                  </td>
+                  {!hideClass && (
+                    <td className="px-3 py-2">
+                      <Input
+                        value={s.className ?? ""}
+                        onChange={(e) =>
+                          onUpdate(s.id, { className: e.target.value })
+                        }
+                        placeholder="cth: XII IPA 1"
+                        className="h-9 w-28 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
+                      />
+                    </td>
+                  )}
                   <td className="px-3 py-2">
                     <Input
                       value={s.name}
@@ -195,14 +205,17 @@ export function RankingTable({
                     />
                   </td>
                   <td className="px-5 py-3">
-                    {s.isValid ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-xs font-medium text-success">
-                        <Check className="h-3 w-3" /> Valid
+                    {!s.isValid ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                        —
+                      </span>
+                    ) : s.score >= PASS_THRESHOLD ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
+                        <CheckCircle2 className="h-3 w-3" /> Tuntas
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-medium text-destructive">
-                        <AlertTriangle className="h-3 w-3" />
-                        {s.error ?? "Invalid"}
+                      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive">
+                        <XCircle className="h-3 w-3" /> Belum Tuntas
                       </span>
                     )}
                   </td>
@@ -221,7 +234,7 @@ export function RankingTable({
             {sorted.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={hideClass ? 5 : 6}
                   className="px-5 py-12 text-center text-sm text-muted-foreground"
                 >
                   Belum ada data nih... Coba upload dulu gambarnya atau tambah data secara manual.
