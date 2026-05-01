@@ -117,14 +117,16 @@ export function RankingTable({
                   Rank <SortIcon active={sortKey === "rank"} />
                 </button>
               </th>
-              <th className="w-32 px-3 py-3">
-                <button
-                  onClick={() => handleSort("class")}
-                  className="inline-flex items-center gap-1 hover:text-foreground"
-                >
-                  Kelas <SortIcon active={sortKey === "class"} />
-                </button>
-              </th>
+              {!hideClass && (
+                <th className="w-32 px-3 py-3">
+                  <button
+                    onClick={() => handleSort("class")}
+                    className="inline-flex items-center gap-1 hover:text-foreground"
+                  >
+                    Kelas <SortIcon active={sortKey === "class"} />
+                  </button>
+                </th>
+              )}
               <th className="px-5 py-3">
                 <button
                   onClick={() => handleSort("name")}
