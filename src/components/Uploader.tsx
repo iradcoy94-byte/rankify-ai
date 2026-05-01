@@ -87,19 +87,15 @@ export function Uploader({ onTextExtracted }: UploaderProps) {
     setProgress(0);
   };
 
-  /** Trigger the device camera (mobile) or webcam (desktop, browser-dependent). */
-  const handleOpenCamera = () => cameraInputRef.current?.click();
+  /** Open the camera modal (works on desktop and mobile via getUserMedia). */
+  const handleOpenCamera = () => setCameraOpen(true);
 
   return (
     <div className="space-y-4">
-      {/* Hidden input that requests the camera directly on mobile. */}
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => acceptFile(e.target.files?.[0])}
+      <CameraCapture
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onCapture={(f) => acceptFile(f)}
       />
 
       <AnimatePresence mode="wait">
