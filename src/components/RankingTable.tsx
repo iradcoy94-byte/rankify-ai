@@ -164,16 +164,18 @@ export function RankingTable({
                   <td className="px-5 py-3">
                     <RankBadge rank={s.rank} valid={s.isValid} />
                   </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      value={s.className ?? ""}
-                      onChange={(e) =>
-                        onUpdate(s.id, { className: e.target.value })
-                      }
-                      placeholder="cth: XII IPA 1"
-                      className="h-9 w-28 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
-                    />
-                  </td>
+                  {!hideClass && (
+                    <td className="px-3 py-2">
+                      <Input
+                        value={s.className ?? ""}
+                        onChange={(e) =>
+                          onUpdate(s.id, { className: e.target.value })
+                        }
+                        placeholder="cth: XII IPA 1"
+                        className="h-9 w-28 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
+                      />
+                    </td>
+                  )}
                   <td className="px-3 py-2">
                     <Input
                       value={s.name}
