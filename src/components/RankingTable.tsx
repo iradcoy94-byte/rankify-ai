@@ -234,7 +234,7 @@ export function RankingTable({
             {sorted.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={hideClass ? 5 : 6}
                   className="px-5 py-12 text-center text-sm text-muted-foreground"
                 >
                   Belum ada data nih... Coba upload dulu gambarnya atau tambah data secara manual.
