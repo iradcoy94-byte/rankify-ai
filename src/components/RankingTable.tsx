@@ -6,12 +6,15 @@ import {
   ArrowDown,
   Trash2,
   Plus,
-  AlertTriangle,
-  Check,
+  XCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Student } from "@/lib/types";
+
+/** Threshold KKM: ≥ 68 → Tuntas, < 68 → Belum Tuntas */
+const PASS_THRESHOLD = 68;
 
 interface RankingTableProps {
   students: Student[];
@@ -21,6 +24,8 @@ interface RankingTableProps {
   ) => void;
   onRemove: (id: string) => void;
   onAdd: () => void;
+  /** Hide the "Kelas" column (used when viewing a single class). */
+  hideClass?: boolean;
 }
 
 type SortKey = "rank" | "name" | "score" | "class";
