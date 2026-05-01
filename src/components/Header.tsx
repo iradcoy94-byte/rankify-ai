@@ -1,17 +1,11 @@
 import { motion } from "framer-motion";
-
-/** Smoothly scroll to a section by id, accounting for sticky headers. */
-const scrollToId = (id: string) => {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const top = el.getBoundingClientRect().top + window.scrollY - 72;
-  window.scrollTo({ top, behavior: "smooth" });
-};
+import { NavLink } from "react-router-dom";
 
 const NAV_ITEMS = [
-  { id: "ranking-overall", label: "Peringkat Keseluruhan" },
-  { id: "ranking-class", label: "Peringkat per Kelas" },
-  { id: "analysis", label: "Analisis" },
+  { to: "/", label: "Beranda", end: true },
+  { to: "/peringkat-keseluruhan", label: "Peringkat Keseluruhan" },
+  { to: "/peringkat-kelas", label: "Peringkat per Kelas" },
+  { to: "/analisis", label: "Analisis" },
 ];
 
 export function Header() {
@@ -39,16 +33,23 @@ export function Header() {
           </div>
         </motion.div>
 
-        {/* Section navigation */}
+        {/* Page navigation */}
         <nav className="order-3 flex w-full flex-wrap items-center gap-1 md:order-2 md:w-auto">
           {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => scrollToId(item.id)}
-              className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-smooth hover:bg-secondary hover:text-foreground md:text-sm"
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                `rounded-full px-3 py-1.5 text-xs font-medium transition-smooth md:text-sm ${
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-elegant"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`
+              }
             >
               {item.label}
-            </button>
+            </NavLink>
           ))}
         </nav>
 
