@@ -224,7 +224,7 @@ export function RankingTable({
                   colSpan={6}
                   className="px-5 py-12 text-center text-sm text-muted-foreground"
                 >
-                  Belum ada data. Upload gambar atau tambah baris manual.
+                  Belum ada data nih... Coba upload dulu gambarnya atau tambah data secara manual.
                 </td>
               </tr>
             )}

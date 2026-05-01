@@ -154,7 +154,7 @@ export function Uploader({ onTextExtracted }: UploaderProps) {
             </div>
             <p className="text-center text-xs text-muted-foreground">
               Pastikan upload file yang <strong className="text-foreground">jelas</strong>{" "}
-              agar tidak ada kekeliruan.
+              agar tidak ada kesalahan data.
             </p>
           </motion.div>
         ) : (

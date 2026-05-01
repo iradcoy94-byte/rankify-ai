@@ -127,11 +127,11 @@ const Index = () => {
       <section id="ranking" className="container mt-20 space-y-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h3 className="text-3xl font-bold">Leaderboard Kelas</h3>
+            <h3 className="text-3xl font-bold">Papan Peringkat Peserta Didik</h3>
             <p className="text-sm text-muted-foreground">
               {students.length > 0
                 ? "Edit data di tabel untuk memperbaiki hasil OCR."
-                : "Usaha tidak pernah menghianati hasil."}
+                : "Coba liat, peringkat berapa kamu?"}
             </p>
           </div>
           {students.length > 0 && (
