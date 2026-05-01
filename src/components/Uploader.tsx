@@ -32,8 +32,8 @@ export function Uploader({ onTextExtracted }: UploaderProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
-  // Hidden <input capture> opens the device camera directly on mobile.
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  // Camera modal state — uses getUserMedia so it works on desktop too.
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   const acceptFile = useCallback((f: File | undefined | null) => {
     if (!f) return;
