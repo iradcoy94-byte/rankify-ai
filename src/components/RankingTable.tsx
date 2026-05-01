@@ -40,6 +40,7 @@ export function RankingTable({
   onUpdate,
   onRemove,
   onAdd,
+  hideClass = false,
 }: RankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
