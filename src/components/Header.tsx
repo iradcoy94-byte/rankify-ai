@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 
 const NAV_ITEMS = [
   { to: "/", label: "Beranda", end: true },
+  { to: "/upload", label: "Upload" },
   { to: "/peringkat-keseluruhan", label: "Peringkat Keseluruhan" },
   { to: "/peringkat-kelas", label: "Peringkat per Kelas" },
   { to: "/analisis", label: "Analisis" },
