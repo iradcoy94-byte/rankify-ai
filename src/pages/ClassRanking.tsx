@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Filter, TrendingUp, Users } from "lucide-react";
 import { Podium } from "@/components/Podium";
 import { RankingTable } from "@/components/RankingTable";
-import { ScoreChart } from "@/components/ScoreChart";
+import { ScoreDistributionLine } from "@/components/ScoreDistributionLine";
+import { PassFailPie } from "@/components/PassFailPie";
+import { MeetingProgressChart } from "@/components/MeetingProgressChart";
 import {
   Select,
   SelectContent,
@@ -23,7 +25,6 @@ export default function ClassRanking() {
     useStudentsCtx();
   const [classFilter, setClassFilter] = useState<string>(NONE);
 
-  // Auto-pick first class once available
   useEffect(() => {
     if (classFilter === NONE && classes.length > 0) {
       setClassFilter(classes[0]);
@@ -89,21 +90,36 @@ export default function ClassRanking() {
       ) : (
         <>
           <Podium students={classFiltered} />
-          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-            <RankingTable
-              students={classFiltered}
-              onUpdate={updateField}
-              onRemove={removeRow}
-              onAdd={() => addRow(classFilter !== NONE ? classFilter : undefined)}
-              hideClass
-            />
-            <div className="rounded-2xl border border-border bg-gradient-card p-5 shadow-card-soft">
-              <h4 className="mb-1 font-semibold">Distribusi Nilai</h4>
-              <p className="mb-3 text-xs text-muted-foreground">
-                Kelas {classFilter === NONE ? "Tanpa kelas" : classFilter}
-              </p>
-              <ScoreChart students={classFiltered} />
-            </div>
+
+          <RankingTable
+            students={classFiltered}
+            onUpdate={updateField}
+            onRemove={removeRow}
+            onAdd={() => addRow(classFilter !== NONE ? classFilter : undefined)}
+            hideClass
+          />
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <ChartCard
+              title="Perkembangan per Pertemuan"
+              subtitle={`Rata-rata kelas ${classFilter === NONE ? "tanpa kelas" : classFilter}`}
+              className="lg:col-span-2"
+            >
+              <MeetingProgressChart students={classFiltered} />
+            </ChartCard>
+            <ChartCard
+              title="Ketuntasan Belajar"
+              subtitle="Tuntas vs belum tuntas (KKM = 68)"
+            >
+              <PassFailPie students={classFiltered} />
+            </ChartCard>
+            <ChartCard
+              title="Distribusi Nilai"
+              subtitle="Hover/klik garis untuk melihat nama siswa"
+              className="lg:col-span-3"
+            >
+              <ScoreDistributionLine students={classFiltered} />
+            </ChartCard>
           </div>
         </>
       )}
@@ -115,4 +131,26 @@ function avgOf(list: { score: number; isValid: boolean }[]) {
   const valid = list.filter((s) => s.isValid);
   if (valid.length === 0) return 0;
   return Math.round((valid.reduce((a, b) => a + b.score, 0) / valid.length) * 10) / 10;
+}
+
+function ChartCard({
+  title,
+  subtitle,
+  children,
+  className = "",
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border border-border bg-gradient-card p-5 shadow-card-soft ${className}`}
+    >
+      <h4 className="font-semibold text-foreground">{title}</h4>
+      <p className="mb-3 text-xs text-muted-foreground">{subtitle}</p>
+      {children}
+    </div>
+  );
 }
