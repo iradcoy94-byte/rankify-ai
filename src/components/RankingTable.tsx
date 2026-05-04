@@ -372,7 +372,7 @@ export function RankingTable({
                         </td>
                       </motion.tr>
                     )}
-                  </>
+                  </FragmentWithKey>
                 );
               })}
             </AnimatePresence>
