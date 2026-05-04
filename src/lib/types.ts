@@ -3,6 +3,18 @@
  * Kept in one place so UI, services, and hooks share the same shape.
  */
 
+/** Three learning models compared in the research/study. */
+export type LearningModel =
+  | "Co-op Co-op + AI"
+  | "Co-op Co-op"
+  | "Konvensional";
+
+export const LEARNING_MODELS: LearningModel[] = [
+  "Co-op Co-op + AI",
+  "Co-op Co-op",
+  "Konvensional",
+];
+
 export interface Student {
   /** Stable client-side id for React keys & edits */
   id: string;
@@ -12,6 +24,14 @@ export interface Student {
   score: number;
   /** Class label like "XII IPA 1" — optional, editable, used for filtering */
   className?: string;
+  /** Meeting / pertemuan number (1..N). Defaults to 1 when not specified. */
+  meeting?: number;
+  /** Learning model used for this score row. */
+  model?: LearningModel;
+  /** Optional pretest score (0..100) — analysed in pretest vs posttest charts */
+  pretest?: number;
+  /** Optional posttest score (0..100) */
+  posttest?: number;
   /** Dense rank, computed per class (1,1,2,3...) */
   rank: number;
   /** Result of validation pass */

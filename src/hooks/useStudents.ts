@@ -26,7 +26,12 @@ export function useStudents(initial: Student[] = []) {
   const updateField = useCallback(
     (
       id: string,
-      patch: Partial<Pick<Student, "name" | "score" | "className">>,
+      patch: Partial<
+        Pick<
+          Student,
+          "name" | "score" | "className" | "meeting" | "model" | "pretest" | "posttest"
+        >
+      >,
     ) => {
       setStudents((prev) =>
         recompute(

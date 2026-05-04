@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment as FragmentWithKey, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowUpDown,
@@ -8,10 +8,20 @@ import {
   Plus,
   XCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { Student } from "@/lib/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Student, LearningModel } from "@/lib/types";
+import { LEARNING_MODELS } from "@/lib/types";
 
 /** Threshold KKM: ≥ 68 → Tuntas, < 68 → Belum Tuntas */
 const PASS_THRESHOLD = 68;
@@ -20,7 +30,12 @@ interface RankingTableProps {
   students: Student[];
   onUpdate: (
     id: string,
-    patch: Partial<Pick<Student, "name" | "score" | "className">>,
+    patch: Partial<
+      Pick<
+        Student,
+        "name" | "score" | "className" | "meeting" | "model" | "pretest" | "posttest"
+      >
+    >,
   ) => void;
   onRemove: (id: string) => void;
   onAdd: () => void;
@@ -28,12 +43,12 @@ interface RankingTableProps {
   hideClass?: boolean;
 }
 
-type SortKey = "rank" | "name" | "score" | "class";
+type SortKey = "rank" | "name" | "score" | "class" | "meeting";
 type SortDir = "asc" | "desc";
 
 /**
- * Editable ranking table with column-toggle sorting (asc ⇄ desc), inline
- * edit, and validation highlight. Default sort = by computed dense rank.
+ * Editable ranking table. Each row has an expandable section for Model,
+ * Pretest, and Posttest so the main table stays readable.
  */
 export function RankingTable({
   students,
@@ -44,14 +59,21 @@ export function RankingTable({
 }: RankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  /** Click a header: toggle dir if same column, else switch column with sane default. */
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      // Sensible defaults: rank ascending (1 first), score descending (high first), name A→Z
       setSortDir(key === "score" ? "desc" : "asc");
     }
   };
@@ -70,9 +92,10 @@ export function RankingTable({
         }
         case "class":
           return (a.className ?? "").localeCompare(b.className ?? "", "id") * dir;
+        case "meeting":
+          return ((a.meeting ?? 1) - (b.meeting ?? 1)) * dir;
         case "rank":
         default: {
-          // invalid (rank 0) always at the bottom regardless of direction
           if (a.rank === 0 && b.rank !== 0) return 1;
           if (b.rank === 0 && a.rank !== 0) return -1;
           return (a.rank - b.rank) * dir;
@@ -91,13 +114,16 @@ export function RankingTable({
     );
   };
 
+  const colCount = (hideClass ? 5 : 6) + 2; // expand + meeting cols
+
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-gradient-card shadow-card-soft">
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <div>
           <h3 className="font-semibold">Tabel Ranking</h3>
           <p className="text-xs text-muted-foreground">
-            Klik sel untuk mengedit · perubahan otomatis tersimpan
+            Klik panah untuk mengisi Model, Pretest & Posttest · perubahan
+            otomatis tersimpan
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={onAdd}>
@@ -107,9 +133,10 @@ export function RankingTable({
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-secondary/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <thead className="bg-secondary/40 text-left text-xs uppercase tracking-wide text-foreground/70">
             <tr>
-              <th className="w-20 px-5 py-3">
+              <th className="w-8 px-3 py-3"></th>
+              <th className="w-20 px-3 py-3">
                 <button
                   onClick={() => handleSort("rank")}
                   className="inline-flex items-center gap-1 hover:text-foreground"
@@ -127,7 +154,7 @@ export function RankingTable({
                   </button>
                 </th>
               )}
-              <th className="px-5 py-3">
+              <th className="px-3 py-3">
                 <button
                   onClick={() => handleSort("name")}
                   className="inline-flex items-center gap-1 hover:text-foreground"
@@ -135,7 +162,15 @@ export function RankingTable({
                   Nama <SortIcon active={sortKey === "name"} />
                 </button>
               </th>
-              <th className="w-32 px-5 py-3">
+              <th className="w-24 px-3 py-3">
+                <button
+                  onClick={() => handleSort("meeting")}
+                  className="inline-flex items-center gap-1 hover:text-foreground"
+                >
+                  Pertemuan <SortIcon active={sortKey === "meeting"} />
+                </button>
+              </th>
+              <th className="w-28 px-3 py-3">
                 <button
                   onClick={() => handleSort("score")}
                   className="inline-flex items-center gap-1 hover:text-foreground"
@@ -143,107 +178,235 @@ export function RankingTable({
                   Nilai <SortIcon active={sortKey === "score"} />
                 </button>
               </th>
-              <th className="w-32 px-5 py-3">Status</th>
-              <th className="w-12 px-5 py-3"></th>
+              <th className="w-32 px-3 py-3">Status</th>
+              <th className="w-12 px-3 py-3"></th>
             </tr>
           </thead>
           <tbody>
             <AnimatePresence initial={false}>
-              {sorted.map((s) => (
-                <motion.tr
-                  key={s.id}
-                  layout
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.2 }}
-                  className={`border-t border-border/60 transition-smooth hover:bg-secondary/30 ${
-                    !s.isValid ? "bg-destructive/5" : ""
-                  }`}
-                >
-                  <td className="px-5 py-3">
-                    <RankBadge rank={s.rank} valid={s.isValid} />
-                  </td>
-                  {!hideClass && (
-                    <td className="px-3 py-2">
-                      <Input
-                        value={s.className ?? ""}
-                        onChange={(e) =>
-                          onUpdate(s.id, { className: e.target.value })
-                        }
-                        placeholder="cth: XII IPA 1"
-                        className="h-9 w-28 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
-                      />
-                    </td>
-                  )}
-                  <td className="px-3 py-2">
-                    <Input
-                      value={s.name}
-                      onChange={(e) =>
-                        onUpdate(s.id, { name: e.target.value })
-                      }
-                      placeholder="Nama siswa"
-                      className="h-9 border-transparent bg-transparent focus:border-primary focus:bg-background"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={Number.isNaN(s.score) ? "" : s.score}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        onUpdate(s.id, {
-                          score: v === "" ? NaN : Number(v),
-                        });
-                      }}
-                      placeholder="0–100"
-                      className={`h-9 w-24 font-mono border-transparent bg-transparent focus:border-primary focus:bg-background ${
-                        !s.isValid ? "text-destructive" : ""
+              {sorted.map((s) => {
+                const isOpen = expanded.has(s.id);
+                return (
+                  <FragmentWithKey key={s.id}>
+                    <motion.tr
+                      key={s.id}
+                      layout
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2 }}
+                      className={`border-t border-border/60 transition-smooth hover:bg-secondary/30 ${
+                        !s.isValid ? "bg-destructive/5" : ""
                       }`}
-                    />
-                  </td>
-                  <td className="px-5 py-3">
-                    {!s.isValid ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                        —
-                      </span>
-                    ) : s.score >= PASS_THRESHOLD ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
-                        <CheckCircle2 className="h-3 w-3" /> Tuntas
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive">
-                        <XCircle className="h-3 w-3" /> Belum Tuntas
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <button
-                      onClick={() => onRemove(s.id)}
-                      className="rounded-md p-2 text-muted-foreground transition-smooth hover:bg-destructive/15 hover:text-destructive"
-                      aria-label="Hapus baris"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </motion.tr>
-              ))}
+                      <td className="px-2 py-2">
+                        <button
+                          onClick={() => toggleExpand(s.id)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                          aria-label="Detail siswa"
+                        >
+                          {isOpen ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-3 py-2">
+                        <RankBadge rank={s.rank} valid={s.isValid} />
+                      </td>
+                      {!hideClass && (
+                        <td className="px-3 py-2">
+                          <Input
+                            value={s.className ?? ""}
+                            onChange={(e) =>
+                              onUpdate(s.id, { className: e.target.value })
+                            }
+                            placeholder="cth: XII IPA 1"
+                            className="h-9 w-28 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
+                          />
+                        </td>
+                      )}
+                      <td className="px-3 py-2">
+                        <Input
+                          value={s.name}
+                          onChange={(e) =>
+                            onUpdate(s.id, { name: e.target.value })
+                          }
+                          placeholder="Nama siswa"
+                          className="h-9 border-transparent bg-transparent focus:border-primary focus:bg-background"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={s.meeting ?? 1}
+                          onChange={(e) =>
+                            onUpdate(s.id, {
+                              meeting:
+                                e.target.value === ""
+                                  ? 1
+                                  : Math.max(1, Number(e.target.value)),
+                            })
+                          }
+                          className="h-9 w-16 font-mono border-transparent bg-transparent focus:border-primary focus:bg-background"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={Number.isNaN(s.score) ? "" : s.score}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            onUpdate(s.id, {
+                              score: v === "" ? NaN : Number(v),
+                            });
+                          }}
+                          placeholder="0–100"
+                          className={`h-9 w-20 font-mono border-transparent bg-transparent focus:border-primary focus:bg-background ${
+                            !s.isValid ? "text-destructive" : ""
+                          }`}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        {!s.isValid ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                            —
+                          </span>
+                        ) : s.score >= PASS_THRESHOLD ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
+                            <CheckCircle2 className="h-3 w-3" /> Tuntas
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive">
+                            <XCircle className="h-3 w-3" /> Belum Tuntas
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2">
+                        <button
+                          onClick={() => onRemove(s.id)}
+                          className="rounded-md p-2 text-muted-foreground transition-smooth hover:bg-destructive/15 hover:text-destructive"
+                          aria-label="Hapus baris"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </motion.tr>
+
+                    {isOpen && (
+                      <motion.tr
+                        key={s.id + "-detail"}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="border-t border-border/40 bg-secondary/20"
+                      >
+                        <td colSpan={colCount} className="px-5 py-4">
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            <DetailField label="Model Pembelajaran">
+                              <Select
+                                value={s.model ?? ""}
+                                onValueChange={(v) =>
+                                  onUpdate(s.id, { model: v as LearningModel })
+                                }
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Pilih model…" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {LEARNING_MODELS.map((m) => (
+                                    <SelectItem key={m} value={m}>
+                                      {m}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </DetailField>
+                            <DetailField label="Pretest (0–100)">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={
+                                  s.pretest === undefined ||
+                                  Number.isNaN(s.pretest)
+                                    ? ""
+                                    : s.pretest
+                                }
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  onUpdate(s.id, {
+                                    pretest: v === "" ? undefined : Number(v),
+                                  });
+                                }}
+                                className="h-9 font-mono"
+                                placeholder="—"
+                              />
+                            </DetailField>
+                            <DetailField label="Posttest (0–100)">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={
+                                  s.posttest === undefined ||
+                                  Number.isNaN(s.posttest)
+                                    ? ""
+                                    : s.posttest
+                                }
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  onUpdate(s.id, {
+                                    posttest: v === "" ? undefined : Number(v),
+                                  });
+                                }}
+                                className="h-9 font-mono"
+                                placeholder="—"
+                              />
+                            </DetailField>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    )}
+                  </FragmentWithKey>
+                );
+              })}
             </AnimatePresence>
             {sorted.length === 0 && (
               <tr>
                 <td
-                  colSpan={hideClass ? 5 : 6}
+                  colSpan={colCount}
                   className="px-5 py-12 text-center text-sm text-muted-foreground"
                 >
-                  Belum ada data nih... Coba upload dulu gambarnya atau tambah data secara manual.
+                  Belum ada data nih... Coba upload dulu gambarnya atau tambah
+                  data secara manual.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function DetailField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </label>
+      {children}
     </div>
   );
 }
