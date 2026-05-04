@@ -187,7 +187,7 @@ export function RankingTable({
               {sorted.map((s) => {
                 const isOpen = expanded.has(s.id);
                 return (
-                  <>
+                  <FragmentWithKey key={s.id}>
                     <motion.tr
                       key={s.id}
                       layout
