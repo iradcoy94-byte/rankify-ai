@@ -3,6 +3,7 @@ import { Filter, TrendingUp, Users } from "lucide-react";
 import { Podium } from "@/components/Podium";
 import { RankingTable } from "@/components/RankingTable";
 import { ScoreDistributionLine } from "@/components/ScoreDistributionLine";
+import { PrePostTable } from "@/components/PrePostTable";
 import { PassFailPie } from "@/components/PassFailPie";
 import { MeetingProgressChart } from "@/components/MeetingProgressChart";
 import {
