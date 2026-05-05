@@ -48,14 +48,29 @@ export default function OverallRanking() {
         <EmptyState />
       ) : (
         <>
-          <Podium students={students} />
+          <Podium students={meetingRows} />
 
           <RankingTable
-            students={students}
+            students={meetingRows}
             onUpdate={updateField}
             onRemove={removeRow}
             onAdd={() => addRow()}
           />
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <PrePostTable
+              students={students}
+              kind="pretest"
+              onUpdate={updateField}
+              onRemove={removeRow}
+            />
+            <PrePostTable
+              students={students}
+              kind="posttest"
+              onUpdate={updateField}
+              onRemove={removeRow}
+            />
+          </div>
 
           {/* Charts grid — fills the previously empty side area */}
           <div className="grid gap-6 lg:grid-cols-3">
