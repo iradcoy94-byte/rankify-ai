@@ -42,6 +42,8 @@ export interface Student {
   pretest?: number;
   /** Optional posttest score (0..100) */
   posttest?: number;
+  /** What kind of score this row represents. Default: "meeting". */
+  kind?: ScoreKind;
   /** Dense rank, computed per class (1,1,2,3...) */
   rank: number;
   /** Result of validation pass */
