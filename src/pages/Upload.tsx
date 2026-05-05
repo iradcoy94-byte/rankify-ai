@@ -44,7 +44,7 @@ export default function Upload() {
 
   // User-controlled metadata applied to every row from this upload batch.
   const [category, setCategory] = useState<Category>("pretest");
-  const [experimentClass, setExperimentClass] = useState<string>(NONE_CLASS);
+  const [experimentClass, setExperimentClass] = useState<string>(EXPERIMENT_CLASSES[0].label);
   const [fallbackClass, setFallbackClass] = useState<string>("");
 
   /** Resolve the class label + model from the experiment-class selection. */
