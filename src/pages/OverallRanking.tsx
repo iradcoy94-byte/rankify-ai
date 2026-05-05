@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { CheckCircle2, AlertTriangle, Users, TrendingUp } from "lucide-react";
 import { Podium } from "@/components/Podium";
 import { RankingTable } from "@/components/RankingTable";
+import { PrePostTable } from "@/components/PrePostTable";
 import { ScoreDistributionLine } from "@/components/ScoreDistributionLine";
 import { PassFailPie } from "@/components/PassFailPie";
 import { MeetingProgressChart } from "@/components/MeetingProgressChart";
@@ -8,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useStudentsCtx } from "@/context/StudentsContext";
 import { StatChip } from "@/components/StatChip";
 import { EmptyState } from "@/components/EmptyState";
+import { recompute } from "@/lib/ranking";
 
 /** Overall ranking across all classes. */
 export default function OverallRanking() {
