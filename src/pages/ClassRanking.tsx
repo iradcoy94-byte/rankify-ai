@@ -3,6 +3,7 @@ import { Filter, TrendingUp, Users } from "lucide-react";
 import { Podium } from "@/components/Podium";
 import { RankingTable } from "@/components/RankingTable";
 import { ScoreDistributionLine } from "@/components/ScoreDistributionLine";
+import { PrePostTable } from "@/components/PrePostTable";
 import { PassFailPie } from "@/components/PassFailPie";
 import { MeetingProgressChart } from "@/components/MeetingProgressChart";
 import {
@@ -35,17 +36,21 @@ export default function ClassRanking() {
     (s) => !s.className || !s.className.trim(),
   );
 
-  const classFiltered = useMemo(() => {
+  const classFilteredAll = useMemo(() => {
     if (classFilter === NONE)
-      return recompute(
-        students.filter((s) => !s.className || !s.className.trim()),
-      );
-    return recompute(
-      students.filter(
-        (s) => (s.className ?? "").trim().toUpperCase() === classFilter,
-      ),
+      return students.filter((s) => !s.className || !s.className.trim());
+    return students.filter(
+      (s) => (s.className ?? "").trim().toUpperCase() === classFilter.toUpperCase(),
     );
   }, [students, classFilter]);
+
+  const classFiltered = useMemo(
+    () =>
+      recompute(
+        classFilteredAll.filter((s) => s.kind !== "pretest" && s.kind !== "posttest"),
+      ),
+    [classFilteredAll],
+  );
 
   return (
     <section className="container mt-8 space-y-8">
@@ -98,6 +103,23 @@ export default function ClassRanking() {
             onAdd={() => addRow(classFilter !== NONE ? classFilter : undefined)}
             hideClass
           />
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <PrePostTable
+              students={classFilteredAll}
+              kind="pretest"
+              onUpdate={updateField}
+              onRemove={removeRow}
+              hideClass
+            />
+            <PrePostTable
+              students={classFilteredAll}
+              kind="posttest"
+              onUpdate={updateField}
+              onRemove={removeRow}
+              hideClass
+            />
+          </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
             <ChartCard

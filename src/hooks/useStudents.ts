@@ -29,7 +29,7 @@ export function useStudents(initial: Student[] = []) {
       patch: Partial<
         Pick<
           Student,
-          "name" | "score" | "className" | "meeting" | "model" | "pretest" | "posttest"
+          "name" | "score" | "className" | "meeting" | "model" | "pretest" | "posttest" | "kind"
         >
       >,
     ) => {

@@ -15,65 +15,81 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Student } from "@/lib/types";
+import type { Student, LearningModel } from "@/lib/types";
+import { EXPERIMENT_CLASSES } from "@/lib/types";
 
 /**
  * Upload page — dedicated screen for adding data via OCR or camera.
- * Before uploading, user picks a category (pretest / posttest / pertemuan N)
- * and optionally a fallback class label, applied to every parsed row.
+ * Before uploading, user picks a category (pretest / posttest / pertemuan 1..5)
+ * and an experiment-class preset (which also auto-fills learning model).
  */
 
-// Category options: pretest, posttest, and pertemuan 1..10
+// Category options: pretest, pertemuan 1..5, posttest
 type Category = "pretest" | "posttest" | `pertemuan-${number}`;
 
 const CATEGORY_OPTIONS: { value: Category; label: string }[] = [
   { value: "pretest", label: "Pre-test" },
-  { value: "posttest", label: "Post-test" },
-  ...Array.from({ length: 10 }, (_, i) => ({
+  ...Array.from({ length: 5 }, (_, i) => ({
     value: `pertemuan-${i + 1}` as Category,
-    label: `Pertemuan ke-${i + 1}`,
+    label: `Pertemuan ${i + 1}`,
   })),
+  { value: "posttest", label: "Post-test" },
 ];
+
+const NONE_CLASS = "__none__";
 
 export default function Upload() {
   const { appendStudents, stats } = useStudentsCtx();
   const navigate = useNavigate();
 
   // User-controlled metadata applied to every row from this upload batch.
-  const [category, setCategory] = useState<Category>("pertemuan-1");
+  const [category, setCategory] = useState<Category>("pretest");
+  const [experimentClass, setExperimentClass] = useState<string>(EXPERIMENT_CLASSES[0].label);
   const [fallbackClass, setFallbackClass] = useState<string>("");
+
+  /** Resolve the class label + model from the experiment-class selection. */
+  const resolveClassMeta = (): { className?: string; model?: LearningModel } => {
+    if (experimentClass === NONE_CLASS) {
+      return { className: fallbackClass.trim() || undefined };
+    }
+    const preset = EXPERIMENT_CLASSES.find((c) => c.label === experimentClass);
+    return { className: preset?.label, model: preset?.model };
+  };
 
   /**
    * Apply the chosen category to a parsed student row:
-   * - pretest  → store score as pretest, meeting=1
-   * - posttest → store score as posttest, keep meeting if any (default last)
-   * - pertemuan N → set meeting=N, keep score as the meeting score
+   * - pretest  → kind=pretest, also mirror score into pretest field
+   * - posttest → kind=posttest, mirror into posttest field
+   * - pertemuan N → kind=meeting, set meeting=N
    */
   const applyCategory = (s: Student): Student => {
     if (category === "pretest") {
-      return { ...s, pretest: s.score, meeting: s.meeting ?? 1 };
+      return { ...s, kind: "pretest", pretest: s.score };
     }
     if (category === "posttest") {
-      return { ...s, posttest: s.score };
+      return { ...s, kind: "posttest", posttest: s.score };
     }
     const n = Number(category.split("-")[1]);
-    return { ...s, meeting: n };
+    return { ...s, kind: "meeting", meeting: n };
   };
 
   const handleExtracted = (text: string) => {
-    const cls = fallbackClass.trim() || undefined;
-    const parsed = parseOcrText(text, cls);
+    const meta = resolveClassMeta();
+    const parsed = parseOcrText(text, meta.className);
     if (parsed.length === 0) {
       toast.warning(
         "Tidak menemukan baris 'Nama Nilai'. Coba tambah baris manual di tabel.",
       );
       return;
     }
-    // If user provided a fallback class, force-apply it on rows missing one.
-    const withClass = parsed.map((s) =>
-      s.className ? s : { ...s, className: cls },
-    );
-    const finalRows = withClass.map(applyCategory);
+    // Force-apply class + model from preset onto every row (preset wins).
+    const finalRows = parsed
+      .map((s) => ({
+        ...s,
+        className: meta.className ?? s.className,
+        model: meta.model ?? s.model,
+      }))
+      .map(applyCategory);
     appendStudents(finalRows);
     toast.success(
       `${finalRows.length} siswa ditambahkan (${
@@ -173,17 +189,39 @@ export default function Upload() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fallback-class">Kelas (opsional)</Label>
-            <Input
-              id="fallback-class"
-              placeholder="cth. XII IPA 1"
-              value={fallbackClass}
-              onChange={(e) => setFallbackClass(e.target.value)}
-            />
+            <Label htmlFor="experiment-class">Kelas penelitian</Label>
+            <Select value={experimentClass} onValueChange={setExperimentClass}>
+              <SelectTrigger id="experiment-class">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPERIMENT_CLASSES.map((c) => (
+                  <SelectItem key={c.label} value={c.label}>
+                    {c.label} — {c.model}
+                  </SelectItem>
+                ))}
+                <SelectItem value={NONE_CLASS}>Lainnya / manual</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">
-              Dipakai jika gambar tidak mencantumkan kelas.
+              Otomatis menetapkan model pembelajaran untuk semua baris.
             </p>
           </div>
+
+          {experimentClass === NONE_CLASS && (
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="fallback-class">Kelas (opsional)</Label>
+              <Input
+                id="fallback-class"
+                placeholder="cth. XII IPA 1"
+                value={fallbackClass}
+                onChange={(e) => setFallbackClass(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Dipakai jika gambar tidak mencantumkan kelas.
+              </p>
+            </div>
+          )}
         </div>
 
         <Uploader onTextExtracted={handleExtracted} />

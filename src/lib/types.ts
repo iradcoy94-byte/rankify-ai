@@ -15,6 +15,16 @@ export const LEARNING_MODELS: LearningModel[] = [
   "Konvensional",
 ];
 
+/** Preset experiment classes used in the research. */
+export const EXPERIMENT_CLASSES: { label: string; model: LearningModel }[] = [
+  { label: "Kelas Eksperimen 1", model: "Co-op Co-op + AI" },
+  { label: "Kelas Eksperimen 2", model: "Co-op Co-op" },
+  { label: "Kelas Konvensional", model: "Konvensional" },
+];
+
+/** Discriminates the kind of score row. */
+export type ScoreKind = "pretest" | "posttest" | "meeting";
+
 export interface Student {
   /** Stable client-side id for React keys & edits */
   id: string;
@@ -32,6 +42,8 @@ export interface Student {
   pretest?: number;
   /** Optional posttest score (0..100) */
   posttest?: number;
+  /** What kind of score this row represents. Default: "meeting". */
+  kind?: ScoreKind;
   /** Dense rank, computed per class (1,1,2,3...) */
   rank: number;
   /** Result of validation pass */

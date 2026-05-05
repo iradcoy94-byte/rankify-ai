@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { CheckCircle2, AlertTriangle, Users, TrendingUp } from "lucide-react";
 import { Podium } from "@/components/Podium";
 import { RankingTable } from "@/components/RankingTable";
+import { PrePostTable } from "@/components/PrePostTable";
 import { ScoreDistributionLine } from "@/components/ScoreDistributionLine";
 import { PassFailPie } from "@/components/PassFailPie";
 import { MeetingProgressChart } from "@/components/MeetingProgressChart";
@@ -8,11 +10,18 @@ import { Button } from "@/components/ui/button";
 import { useStudentsCtx } from "@/context/StudentsContext";
 import { StatChip } from "@/components/StatChip";
 import { EmptyState } from "@/components/EmptyState";
+import { recompute } from "@/lib/ranking";
 
 /** Overall ranking across all classes. */
 export default function OverallRanking() {
   const { students, stats, updateField, removeRow, addRow, clear } =
     useStudentsCtx();
+
+  // Split rows: meeting/legacy → main ranking; pretest/posttest → dedicated tables.
+  const meetingRows = useMemo(
+    () => recompute(students.filter((s) => s.kind !== "pretest" && s.kind !== "posttest")),
+    [students],
+  );
 
   return (
     <section className="container mt-8 space-y-8">
@@ -39,14 +48,29 @@ export default function OverallRanking() {
         <EmptyState />
       ) : (
         <>
-          <Podium students={students} />
+          <Podium students={meetingRows} />
 
           <RankingTable
-            students={students}
+            students={meetingRows}
             onUpdate={updateField}
             onRemove={removeRow}
             onAdd={() => addRow()}
           />
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <PrePostTable
+              students={students}
+              kind="pretest"
+              onUpdate={updateField}
+              onRemove={removeRow}
+            />
+            <PrePostTable
+              students={students}
+              kind="posttest"
+              onUpdate={updateField}
+              onRemove={removeRow}
+            />
+          </div>
 
           {/* Charts grid — fills the previously empty side area */}
           <div className="grid gap-6 lg:grid-cols-3">
