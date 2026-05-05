@@ -104,6 +104,23 @@ export default function ClassRanking() {
             hideClass
           />
 
+          <div className="grid gap-6 lg:grid-cols-2">
+            <PrePostTable
+              students={classFilteredAll}
+              kind="pretest"
+              onUpdate={updateField}
+              onRemove={removeRow}
+              hideClass
+            />
+            <PrePostTable
+              students={classFilteredAll}
+              kind="posttest"
+              onUpdate={updateField}
+              onRemove={removeRow}
+              hideClass
+            />
+          </div>
+
           <div className="grid gap-6 lg:grid-cols-3">
             <ChartCard
               title="Perkembangan per Pertemuan"
