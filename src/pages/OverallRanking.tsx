@@ -17,6 +17,12 @@ export default function OverallRanking() {
   const { students, stats, updateField, removeRow, addRow, clear } =
     useStudentsCtx();
 
+  // Split rows: meeting/legacy → main ranking; pretest/posttest → dedicated tables.
+  const meetingRows = useMemo(
+    () => recompute(students.filter((s) => s.kind !== "pretest" && s.kind !== "posttest")),
+    [students],
+  );
+
   return (
     <section className="container mt-8 space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
