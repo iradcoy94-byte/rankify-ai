@@ -189,17 +189,39 @@ export default function Upload() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fallback-class">Kelas (opsional)</Label>
-            <Input
-              id="fallback-class"
-              placeholder="cth. XII IPA 1"
-              value={fallbackClass}
-              onChange={(e) => setFallbackClass(e.target.value)}
-            />
+            <Label htmlFor="experiment-class">Kelas penelitian</Label>
+            <Select value={experimentClass} onValueChange={setExperimentClass}>
+              <SelectTrigger id="experiment-class">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPERIMENT_CLASSES.map((c) => (
+                  <SelectItem key={c.label} value={c.label}>
+                    {c.label} — {c.model}
+                  </SelectItem>
+                ))}
+                <SelectItem value={NONE_CLASS}>Lainnya / manual</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">
-              Dipakai jika gambar tidak mencantumkan kelas.
+              Otomatis menetapkan model pembelajaran untuk semua baris.
             </p>
           </div>
+
+          {experimentClass === NONE_CLASS && (
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="fallback-class">Kelas (opsional)</Label>
+              <Input
+                id="fallback-class"
+                placeholder="cth. XII IPA 1"
+                value={fallbackClass}
+                onChange={(e) => setFallbackClass(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Dipakai jika gambar tidak mencantumkan kelas.
+              </p>
+            </div>
+          )}
         </div>
 
         <Uploader onTextExtracted={handleExtracted} />
