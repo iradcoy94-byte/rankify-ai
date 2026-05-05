@@ -36,17 +36,21 @@ export default function ClassRanking() {
     (s) => !s.className || !s.className.trim(),
   );
 
-  const classFiltered = useMemo(() => {
+  const classFilteredAll = useMemo(() => {
     if (classFilter === NONE)
-      return recompute(
-        students.filter((s) => !s.className || !s.className.trim()),
-      );
-    return recompute(
-      students.filter(
-        (s) => (s.className ?? "").trim().toUpperCase() === classFilter,
-      ),
+      return students.filter((s) => !s.className || !s.className.trim());
+    return students.filter(
+      (s) => (s.className ?? "").trim().toUpperCase() === classFilter.toUpperCase(),
     );
   }, [students, classFilter]);
+
+  const classFiltered = useMemo(
+    () =>
+      recompute(
+        classFilteredAll.filter((s) => s.kind !== "pretest" && s.kind !== "posttest"),
+      ),
+    [classFilteredAll],
+  );
 
   return (
     <section className="container mt-8 space-y-8">
