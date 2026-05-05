@@ -15,6 +15,16 @@ export const LEARNING_MODELS: LearningModel[] = [
   "Konvensional",
 ];
 
+/** Preset experiment classes used in the research. */
+export const EXPERIMENT_CLASSES: { label: string; model: LearningModel }[] = [
+  { label: "Kelas Eksperimen 1", model: "Co-op Co-op + AI" },
+  { label: "Kelas Eksperimen 2", model: "Co-op Co-op" },
+  { label: "Kelas Konvensional", model: "Konvensional" },
+];
+
+/** Discriminates the kind of score row. */
+export type ScoreKind = "pretest" | "posttest" | "meeting";
+
 export interface Student {
   /** Stable client-side id for React keys & edits */
   id: string;
