@@ -2,9 +2,9 @@ import { AnalysisSection } from "@/components/AnalysisSection";
 import { MeetingProgressChart } from "@/components/MeetingProgressChart";
 import {
   GainScoreChart,
-  ModelEffectivenessChart,
   PrePostChart,
 } from "@/components/StudyCharts";
+import { NGainChart } from "@/components/NGainChart";
 import { useStudentsCtx } from "@/context/StudentsContext";
 import { useMemo } from "react";
 import type { Student } from "@/lib/types";
