@@ -73,3 +73,27 @@ export function applyDenseRanking(students: Student[]): Student[] {
 export function recompute(students: Student[]): Student[] {
   return applyDenseRanking(students.map(validateStudent));
 }
+
+/**
+ * Dense ranking across ALL students (ignoring class). Used on the
+ * "Peringkat Keseluruhan" page so rank 1,2,3,... is unique per score globally.
+ */
+export function applyGlobalDenseRanking(students: Student[]): Student[] {
+  const valid = students.filter((s) => s.isValid);
+  const invalid = students.filter((s) => !s.isValid);
+  const sorted = [...valid].sort((a, b) => b.score - a.score);
+  let currentRank = 0;
+  let lastScore: number | null = null;
+  const ranked = sorted.map((s) => {
+    if (lastScore === null || s.score !== lastScore) {
+      currentRank += 1;
+      lastScore = s.score;
+    }
+    return { ...s, rank: currentRank };
+  });
+  return [...ranked, ...invalid.map((s) => ({ ...s, rank: 0 }))];
+}
+
+export function recomputeGlobal(students: Student[]): Student[] {
+  return applyGlobalDenseRanking(students.map(validateStudent));
+}
