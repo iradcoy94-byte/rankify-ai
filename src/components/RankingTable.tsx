@@ -180,7 +180,7 @@ export function RankingTable({
                 </button>
               </th>
               {!hideClass && (
-                <th className="w-32 px-3 py-3">
+                <th className="w-44 px-3 py-3">
                   <button
                     onClick={() => handleSort("class")}
                     className="inline-flex items-center gap-1 hover:text-foreground"
@@ -258,7 +258,7 @@ export function RankingTable({
                               onUpdate(s.id, { className: e.target.value })
                             }
                             placeholder="cth: XII IPA 1"
-                            className="h-9 w-28 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
+                            className="h-9 w-40 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
                           />
                         </td>
                       )}
