@@ -48,12 +48,12 @@ export default function Analysis() {
         <GainScoreChart students={students} />
       </Block>
 
-      {/* ---- Per Meeting (overall) ---- */}
+      {/* ---- Per Meeting by Model/Class ---- */}
       <Block
-        title="Perkembangan Nilai per Pertemuan"
-        subtitle="Rata-rata nilai seluruh siswa di setiap pertemuan."
+        title="Perkembangan antar Model Pembelajaran / Kelas"
+        subtitle="Setiap garis mewakili satu model pembelajaran (atau kelas jika model belum diatur). Bandingkan tren rata-rata nilai tiap pertemuan."
       >
-        <MeetingProgressChart students={students} />
+        <MeetingProgressChart students={students} byGroup height={300} />
       </Block>
 
       {/* ---- Per Student trajectory ---- */}
