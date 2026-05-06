@@ -136,10 +136,34 @@ export function RankingTable({
             otomatis tersimpan
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={onAdd}>
-          <Plus className="h-4 w-4" /> Tambah baris
-        </Button>
-      </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {meetingOptions && meetingOptions.length > 0 && onMeetingFilterChange && (
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-card/60 px-2 py-1 backdrop-blur">
+              <CalendarDays className="ml-1 h-3.5 w-3.5 text-primary" />
+              <Select
+                value={String(meetingFilter ?? "all")}
+                onValueChange={(v) =>
+                  onMeetingFilterChange(v === "all" ? "all" : Number(v))
+                }
+              >
+                <SelectTrigger className="h-8 w-[160px] border-0 bg-transparent text-xs focus:ring-0">
+                  <SelectValue placeholder="Pilih pertemuan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua pertemuan</SelectItem>
+                  {meetingOptions.map((m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      Pertemuan {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <Button variant="outline" size="sm" onClick={onAdd}>
+            <Plus className="h-4 w-4" /> Tambah baris
+          </Button>
+        </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
