@@ -108,7 +108,7 @@ export function Uploader({ onTextExtracted }: UploaderProps) {
             className="space-y-3"
           >
             <div
-              {...(getRootProps() as any)}
+              {...getRootProps()}
               className={`group relative cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-smooth ${
                 isDragActive
                   ? "border-primary bg-primary/5 shadow-glow"
