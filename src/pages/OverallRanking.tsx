@@ -71,7 +71,12 @@ export default function OverallRanking() {
             onUpdate={updateField}
             onRemove={removeRow}
             onAdd={() => addRow()}
+            meetingOptions={meetingOptions}
+            meetingFilter={meetingFilter}
+            onMeetingFilterChange={setMeetingFilter}
           />
+
+          <TopRankersTable students={meetingRowsAll} />
 
           <div className="grid gap-6 lg:grid-cols-2">
             <PrePostTable
