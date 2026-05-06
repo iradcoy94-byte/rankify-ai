@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle2, AlertTriangle, Users, TrendingUp } from "lucide-react";
 import { Podium } from "@/components/Podium";
 import { RankingTable } from "@/components/RankingTable";
@@ -6,6 +6,7 @@ import { PrePostTable } from "@/components/PrePostTable";
 import { ScoreDistributionLine } from "@/components/ScoreDistributionLine";
 import { PassFailPie } from "@/components/PassFailPie";
 import { MeetingProgressChart } from "@/components/MeetingProgressChart";
+import { TopRankersTable } from "@/components/TopRankersTable";
 import { Button } from "@/components/ui/button";
 import { useStudentsCtx } from "@/context/StudentsContext";
 import { StatChip } from "@/components/StatChip";
@@ -16,12 +17,27 @@ import { recompute } from "@/lib/ranking";
 export default function OverallRanking() {
   const { students, stats, updateField, removeRow, addRow, clear } =
     useStudentsCtx();
+  const [meetingFilter, setMeetingFilter] = useState<number | "all">("all");
 
   // Split rows: meeting/legacy → main ranking; pretest/posttest → dedicated tables.
-  const meetingRows = useMemo(
-    () => recompute(students.filter((s) => s.kind !== "pretest" && s.kind !== "posttest")),
+  const meetingRowsAll = useMemo(
+    () => students.filter((s) => s.kind !== "pretest" && s.kind !== "posttest"),
     [students],
   );
+
+  const meetingOptions = useMemo(() => {
+    const set = new Set<number>();
+    meetingRowsAll.forEach((s) => set.add(s.meeting ?? 1));
+    return Array.from(set).sort((a, b) => a - b);
+  }, [meetingRowsAll]);
+
+  const meetingRows = useMemo(() => {
+    const filtered =
+      meetingFilter === "all"
+        ? meetingRowsAll
+        : meetingRowsAll.filter((s) => (s.meeting ?? 1) === meetingFilter);
+    return recompute(filtered);
+  }, [meetingRowsAll, meetingFilter]);
 
   return (
     <section className="container mt-8 space-y-8">
