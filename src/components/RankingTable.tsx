@@ -63,6 +63,9 @@ export function RankingTable({
   onRemove,
   onAdd,
   hideClass = false,
+  meetingOptions,
+  meetingFilter,
+  onMeetingFilterChange,
 }: RankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
