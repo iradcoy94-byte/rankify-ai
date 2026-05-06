@@ -42,6 +42,12 @@ interface RankingTableProps {
   onAdd: () => void;
   /** Hide the "Kelas" column (used when viewing a single class). */
   hideClass?: boolean;
+  /** Available meeting options for the in-table filter. */
+  meetingOptions?: number[];
+  /** Currently selected meeting ('all' = show all). */
+  meetingFilter?: number | "all";
+  /** Notifies parent when meeting filter changes. */
+  onMeetingFilterChange?: (val: number | "all") => void;
 }
 
 type SortKey = "rank" | "name" | "score" | "class" | "meeting";
