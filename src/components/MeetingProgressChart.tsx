@@ -16,17 +16,20 @@ interface Props {
   height?: number;
   /** When true, draw a separate line per student (used in per-student trajectory). */
   perStudent?: boolean;
+  /** When true, draw one line per learning model / class group. */
+  byGroup?: boolean;
 }
 
 /**
  * Average score per pertemuan (meeting). Defaults to one line for the whole
- * dataset's average. When perStudent=true, draws one line per student showing
- * their individual progression.
+ * dataset's average. When perStudent=true, draws one line per student. When
+ * byGroup=true, draws one line per learning model (or className fallback).
  */
 export function MeetingProgressChart({
   students,
   height = 260,
   perStudent = false,
+  byGroup = false,
 }: Props) {
   const valid = students.filter((s) => s.isValid);
 
@@ -37,9 +40,11 @@ export function MeetingProgressChart({
     return Array.from(set).sort((a, b) => a - b);
   }, [valid]);
 
+  const groupKey = (s: Student) =>
+    s.model ?? (s.className?.trim() || "Tanpa Kelompok");
+
   const data = useMemo(() => {
     if (perStudent) {
-      // Group rows by student name, average score per meeting (in case of dupes).
       const byStudent = new Map<string, Map<number, number[]>>();
       for (const s of valid) {
         const m = s.meeting ?? 1;
@@ -62,6 +67,30 @@ export function MeetingProgressChart({
       });
     }
 
+    if (byGroup) {
+      const groups = new Map<string, Map<number, number[]>>();
+      for (const s of valid) {
+        const k = groupKey(s);
+        const m = s.meeting ?? 1;
+        if (!groups.has(k)) groups.set(k, new Map());
+        const map = groups.get(k)!;
+        if (!map.has(m)) map.set(m, []);
+        map.get(m)!.push(s.score);
+      }
+      return meetings.map((m) => {
+        const row: Record<string, number | string> = { meeting: `P${m}` };
+        for (const [name, map] of groups) {
+          const arr = map.get(m);
+          if (arr && arr.length) {
+            row[name] =
+              Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) /
+              10;
+          }
+        }
+        return row;
+      });
+    }
+
     // Aggregate average across the whole class per meeting.
     return meetings.map((m) => {
       const rows = valid.filter((s) => (s.meeting ?? 1) === m);
@@ -73,7 +102,7 @@ export function MeetingProgressChart({
             ) / 10;
       return { meeting: `P${m}`, "Rata-rata": avg, jumlah: rows.length };
     });
-  }, [valid, meetings, perStudent]);
+  }, [valid, meetings, perStudent, byGroup]);
 
   if (valid.length === 0 || meetings.length === 0) {
     return (
