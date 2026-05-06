@@ -2,9 +2,9 @@ import { AnalysisSection } from "@/components/AnalysisSection";
 import { MeetingProgressChart } from "@/components/MeetingProgressChart";
 import {
   GainScoreChart,
-  ModelEffectivenessChart,
   PrePostChart,
 } from "@/components/StudyCharts";
+import { NGainChart } from "@/components/NGainChart";
 import { useStudentsCtx } from "@/context/StudentsContext";
 import { useMemo } from "react";
 import type { Student } from "@/lib/types";
@@ -48,12 +48,12 @@ export default function Analysis() {
         <GainScoreChart students={students} />
       </Block>
 
-      {/* ---- Per Meeting (overall) ---- */}
+      {/* ---- Per Meeting by Model/Class ---- */}
       <Block
-        title="Perkembangan Nilai per Pertemuan"
-        subtitle="Rata-rata nilai seluruh siswa di setiap pertemuan."
+        title="Perkembangan antar Model Pembelajaran / Kelas"
+        subtitle="Setiap garis mewakili satu model pembelajaran (atau kelas jika model belum diatur). Bandingkan tren rata-rata nilai tiap pertemuan."
       >
-        <MeetingProgressChart students={students} />
+        <MeetingProgressChart students={students} byGroup height={300} />
       </Block>
 
       {/* ---- Per Student trajectory ---- */}
@@ -68,12 +68,12 @@ export default function Analysis() {
         )}
       </Block>
 
-      {/* ---- Model effectiveness ---- */}
+      {/* ---- Model effectiveness via N-Gain ---- */}
       <Block
-        title="Efektivitas Model Pembelajaran"
-        subtitle="Membandingkan rata-rata nilai dan persentase ketuntasan di tiga model: Co-op Co-op + AI, Co-op Co-op, dan Konvensional."
+        title="Efektivitas Model Pembelajaran (Uji N-Gain)"
+        subtitle="Membandingkan efektivitas tiga model pembelajaran (Co-op Co-op + AI, Co-op Co-op, Konvensional) menggunakan N-Gain ternormalisasi (Hake) dari nilai pretest & posttest."
       >
-        <ModelEffectivenessChart students={students} />
+        <NGainChart students={students} />
         <ModelInsight students={students} />
       </Block>
     </section>
