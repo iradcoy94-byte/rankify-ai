@@ -6,6 +6,7 @@ import { ScoreDistributionLine } from "@/components/ScoreDistributionLine";
 import { PrePostTable } from "@/components/PrePostTable";
 import { PassFailPie } from "@/components/PassFailPie";
 import { MeetingProgressChart } from "@/components/MeetingProgressChart";
+import { TopRankersTable } from "@/components/TopRankersTable";
 import {
   Select,
   SelectContent,
