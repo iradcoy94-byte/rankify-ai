@@ -3,10 +3,10 @@ import { NavLink } from "react-router-dom";
 
 const NAV_ITEMS = [
   { to: "/", label: "Beranda", end: true },
-  { to: "/upload", label: "Upload" },
-  { to: "/peringkat-keseluruhan", label: "Peringkat Keseluruhan" },
-  { to: "/peringkat-kelas", label: "Peringkat per Kelas" },
-  { to: "/analisis", label: "Analisis" },
+  { to: "/upload", label: "Input Data" },
+  { to: "/peringkat-keseluruhan", label: "Hasil Keseluruhan" },
+  { to: "/peringkat-kelas", label: "Hasil per Kelas" },
+  { to: "/analisis", label: "Analisis Peningkatan" },
 ];
 
 export function Header() {
@@ -29,7 +29,7 @@ export function Header() {
               Rankify<span className="text-gradient-primary">.AI</span>
             </h1>
             <p className="text-xs text-muted-foreground">
-              Validasi · Ranking · Insight AI
+              Ranking · Insight AI · Analysis
             </p>
           </div>
         </motion.div>
@@ -56,7 +56,7 @@ export function Header() {
 
         <div className="order-2 hidden items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs text-muted-foreground backdrop-blur md:order-3 md:flex">
           <span className="h-2 w-2 animate-pulse rounded-full bg-success" />
-          Powered by Irsyad
+          Inspired by Irsyad
         </div>
       </div>
     </header>
