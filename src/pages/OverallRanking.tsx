@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useStudentsCtx } from "@/context/StudentsContext";
 import { StatChip } from "@/components/StatChip";
 import { EmptyState } from "@/components/EmptyState";
-import { recompute } from "@/lib/ranking";
+import { recomputeGlobal } from "@/lib/ranking";
 
 /** Overall ranking across all classes. */
 export default function OverallRanking() {
@@ -36,7 +36,7 @@ export default function OverallRanking() {
       meetingFilter === "all"
         ? meetingRowsAll
         : meetingRowsAll.filter((s) => (s.meeting ?? 1) === meetingFilter);
-    return recompute(filtered);
+    return recomputeGlobal(filtered);
   }, [meetingRowsAll, meetingFilter]);
 
   return (
