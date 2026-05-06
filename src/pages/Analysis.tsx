@@ -68,12 +68,12 @@ export default function Analysis() {
         )}
       </Block>
 
-      {/* ---- Model effectiveness ---- */}
+      {/* ---- Model effectiveness via N-Gain ---- */}
       <Block
-        title="Efektivitas Model Pembelajaran"
-        subtitle="Membandingkan rata-rata nilai dan persentase ketuntasan di tiga model: Co-op Co-op + AI, Co-op Co-op, dan Konvensional."
+        title="Efektivitas Model Pembelajaran (Uji N-Gain)"
+        subtitle="Membandingkan efektivitas tiga model pembelajaran (Co-op Co-op + AI, Co-op Co-op, Konvensional) menggunakan N-Gain ternormalisasi (Hake) dari nilai pretest & posttest."
       >
-        <ModelEffectivenessChart students={students} />
+        <NGainChart students={students} />
         <ModelInsight students={students} />
       </Block>
     </section>
