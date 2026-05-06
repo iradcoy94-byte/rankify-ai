@@ -131,10 +131,11 @@ export function MeetingProgressChart({
     "hsl(var(--primary-glow))",
   ];
 
-  // For perStudent mode collect names from the first row's keys.
-  const studentNames = perStudent
-    ? Object.keys(data[0]).filter((k) => k !== "meeting")
-    : [];
+  // For perStudent / byGroup mode collect series names from the first row's keys.
+  const seriesNames =
+    perStudent || byGroup
+      ? Object.keys(data[0]).filter((k) => k !== "meeting")
+      : [];
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -156,17 +157,18 @@ export function MeetingProgressChart({
             color: "hsl(var(--foreground))",
           }}
         />
-        {perStudent ? (
+        {perStudent || byGroup ? (
           <>
             <Legend wrapperStyle={{ fontSize: 11, color: "hsl(var(--foreground))" }} />
-            {studentNames.map((name, i) => (
+            {seriesNames.map((name, i) => (
               <Line
                 key={name}
                 type="monotone"
                 dataKey={name}
                 stroke={palette[i % palette.length]}
-                strokeWidth={2}
-                dot={{ r: 3 }}
+                strokeWidth={byGroup ? 3 : 2}
+                dot={{ r: byGroup ? 4 : 3 }}
+                activeDot={{ r: 6 }}
                 connectNulls
               />
             ))}
