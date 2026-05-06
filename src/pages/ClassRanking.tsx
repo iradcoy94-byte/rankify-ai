@@ -118,6 +118,16 @@ export default function ClassRanking() {
             onRemove={removeRow}
             onAdd={() => addRow(classFilter !== NONE ? classFilter : undefined)}
             hideClass
+            meetingOptions={meetingOptions}
+            meetingFilter={meetingFilter}
+            onMeetingFilterChange={setMeetingFilter}
+          />
+
+          <TopRankersTable
+            students={meetingRowsAll}
+            subtitle={`Top 3 siswa dengan total peringkat 1 terbanyak di kelas ${
+              classFilter === NONE ? "tanpa kelas" : classFilter
+            }`}
           />
 
           <div className="grid gap-6 lg:grid-cols-2">
