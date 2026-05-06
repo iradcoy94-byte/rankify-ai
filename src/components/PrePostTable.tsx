@@ -61,7 +61,7 @@ export function PrePostTable({
             <tr>
               <th className="w-12 px-3 py-3">No</th>
               {!hideClass && <th className="w-40 px-3 py-3">Kelas</th>}
-              <th className="px-3 py-3">Nama</th>
+              <th className="min-w-[240px] px-3 py-3 text-left">Nama</th>
               <th className="w-28 px-3 py-3">Nilai</th>
               <th className="w-32 px-3 py-3">Status</th>
               <th className="w-12 px-3 py-3"></th>
@@ -98,7 +98,7 @@ export function PrePostTable({
                     <Input
                       value={s.name}
                       onChange={(e) => onUpdate(s.id, { name: e.target.value })}
-                      className="h-9 border-transparent bg-transparent focus:border-primary focus:bg-background"
+                      className="h-9 min-w-[220px] border-transparent bg-transparent focus:border-primary focus:bg-background"
                     />
                   </td>
                   <td className="px-3 py-2">

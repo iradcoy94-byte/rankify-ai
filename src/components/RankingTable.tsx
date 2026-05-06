@@ -74,7 +74,13 @@ export function RankingTable({
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+      next.add(id);
+      }
+
       return next;
     });
   };
@@ -180,7 +186,7 @@ export function RankingTable({
                 </button>
               </th>
               {!hideClass && (
-                <th className="w-32 px-3 py-3">
+                <th className="w-44 px-3 py-3 text-left">
                   <button
                     onClick={() => handleSort("class")}
                     className="inline-flex items-center gap-1 hover:text-foreground"
@@ -189,7 +195,7 @@ export function RankingTable({
                   </button>
                 </th>
               )}
-              <th className="px-3 py-3">
+              <th className="px-3 py-3 text-left">
                 <button
                   onClick={() => handleSort("name")}
                   className="inline-flex items-center gap-1 hover:text-foreground"
@@ -197,7 +203,7 @@ export function RankingTable({
                   Nama <SortIcon active={sortKey === "name"} />
                 </button>
               </th>
-              <th className="w-24 px-3 py-3">
+              <th className="w-24 px-3 py-3 text-center">
                 <button
                   onClick={() => handleSort("meeting")}
                   className="inline-flex items-center gap-1 hover:text-foreground"
@@ -205,7 +211,7 @@ export function RankingTable({
                   Pertemuan <SortIcon active={sortKey === "meeting"} />
                 </button>
               </th>
-              <th className="w-28 px-3 py-3">
+              <th className="w-28 px-3 py-3 text-center">
                 <button
                   onClick={() => handleSort("score")}
                   className="inline-flex items-center gap-1 hover:text-foreground"
@@ -258,7 +264,7 @@ export function RankingTable({
                               onUpdate(s.id, { className: e.target.value })
                             }
                             placeholder="cth: EKSP 1"
-                            className="h-9 w-28 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
+                            className="h-9 w-40 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
                           />
                         </td>
                       )}
@@ -272,7 +278,7 @@ export function RankingTable({
                           className="h-9 border-transparent bg-transparent focus:border-primary focus:bg-background"
                         />
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 text-center">
                         <Input
                           type="number"
                           min={1}
@@ -285,10 +291,10 @@ export function RankingTable({
                                   : Math.max(1, Number(e.target.value)),
                             })
                           }
-                          className="h-9 w-16 font-mono border-transparent bg-transparent focus:border-primary focus:bg-background"
+                          className="mx-auto h-9 w-16 text-center font-mono border-transparent bg-transparent focus:border-primary focus:bg-background"
                         />
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 text-center">
                         <Input
                           type="number"
                           min={0}
@@ -301,7 +307,7 @@ export function RankingTable({
                             });
                           }}
                           placeholder="0–100"
-                          className={`h-9 w-20 font-mono border-transparent bg-transparent focus:border-primary focus:bg-background ${
+                          className={`mx-auto h-9 w-20 text-center font-mono border-transparent bg-transparent focus:border-primary focus:bg-background ${
                             !s.isValid ? "text-destructive" : ""
                           }`}
                         />
