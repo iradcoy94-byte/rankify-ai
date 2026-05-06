@@ -164,6 +164,7 @@ export function RankingTable({
             <Plus className="h-4 w-4" /> Tambah baris
           </Button>
         </div>
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
