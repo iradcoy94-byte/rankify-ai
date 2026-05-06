@@ -6,6 +6,7 @@ import { ScoreDistributionLine } from "@/components/ScoreDistributionLine";
 import { PrePostTable } from "@/components/PrePostTable";
 import { PassFailPie } from "@/components/PassFailPie";
 import { MeetingProgressChart } from "@/components/MeetingProgressChart";
+import { TopRankersTable } from "@/components/TopRankersTable";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ export default function ClassRanking() {
   const { students, classes, updateField, removeRow, addRow } =
     useStudentsCtx();
   const [classFilter, setClassFilter] = useState<string>(NONE);
+  const [meetingFilter, setMeetingFilter] = useState<number | "all">("all");
 
   useEffect(() => {
     if (classFilter === NONE && classes.length > 0) {
@@ -44,13 +46,27 @@ export default function ClassRanking() {
     );
   }, [students, classFilter]);
 
-  const classFiltered = useMemo(
+  const meetingRowsAll = useMemo(
     () =>
-      recompute(
-        classFilteredAll.filter((s) => s.kind !== "pretest" && s.kind !== "posttest"),
+      classFilteredAll.filter(
+        (s) => s.kind !== "pretest" && s.kind !== "posttest",
       ),
     [classFilteredAll],
   );
+
+  const meetingOptions = useMemo(() => {
+    const set = new Set<number>();
+    meetingRowsAll.forEach((s) => set.add(s.meeting ?? 1));
+    return Array.from(set).sort((a, b) => a - b);
+  }, [meetingRowsAll]);
+
+  const classFiltered = useMemo(() => {
+    const filtered =
+      meetingFilter === "all"
+        ? meetingRowsAll
+        : meetingRowsAll.filter((s) => (s.meeting ?? 1) === meetingFilter);
+    return recompute(filtered);
+  }, [meetingRowsAll, meetingFilter]);
 
   return (
     <section className="container mt-8 space-y-8">
@@ -102,6 +118,16 @@ export default function ClassRanking() {
             onRemove={removeRow}
             onAdd={() => addRow(classFilter !== NONE ? classFilter : undefined)}
             hideClass
+            meetingOptions={meetingOptions}
+            meetingFilter={meetingFilter}
+            onMeetingFilterChange={setMeetingFilter}
+          />
+
+          <TopRankersTable
+            students={meetingRowsAll}
+            subtitle={`Top 3 siswa dengan total peringkat 1 terbanyak di kelas ${
+              classFilter === NONE ? "tanpa kelas" : classFilter
+            }`}
           />
 
           <div className="grid gap-6 lg:grid-cols-2">

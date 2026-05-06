@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,12 @@ interface RankingTableProps {
   onAdd: () => void;
   /** Hide the "Kelas" column (used when viewing a single class). */
   hideClass?: boolean;
+  /** Available meeting options for the in-table filter. */
+  meetingOptions?: number[];
+  /** Currently selected meeting ('all' = show all). */
+  meetingFilter?: number | "all";
+  /** Notifies parent when meeting filter changes. */
+  onMeetingFilterChange?: (val: number | "all") => void;
 }
 
 type SortKey = "rank" | "name" | "score" | "class" | "meeting";
@@ -56,6 +63,9 @@ export function RankingTable({
   onRemove,
   onAdd,
   hideClass = false,
+  meetingOptions,
+  meetingFilter,
+  onMeetingFilterChange,
 }: RankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -126,9 +136,34 @@ export function RankingTable({
             otomatis tersimpan
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={onAdd}>
-          <Plus className="h-4 w-4" /> Tambah baris
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {meetingOptions && meetingOptions.length > 0 && onMeetingFilterChange && (
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-card/60 px-2 py-1 backdrop-blur">
+              <CalendarDays className="ml-1 h-3.5 w-3.5 text-primary" />
+              <Select
+                value={String(meetingFilter ?? "all")}
+                onValueChange={(v) =>
+                  onMeetingFilterChange(v === "all" ? "all" : Number(v))
+                }
+              >
+                <SelectTrigger className="h-8 w-[160px] border-0 bg-transparent text-xs focus:ring-0">
+                  <SelectValue placeholder="Pilih pertemuan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua pertemuan</SelectItem>
+                  {meetingOptions.map((m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      Pertemuan {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <Button variant="outline" size="sm" onClick={onAdd}>
+            <Plus className="h-4 w-4" /> Tambah baris
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
