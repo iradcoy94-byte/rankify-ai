@@ -98,24 +98,27 @@ export function PrePostTable({
                     {i + 1}
                   </td>
                   {!hideClass && (
-                    <td className="px-3 py-2">
-                      <Input
-                        value={s.className ?? ""}
-                        onChange={(e) =>
-                          onUpdate(s.id, { className: e.target.value })
-                        }
-                        className="h-9 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
-                      />
+                    <td className="px-3 py-2 text-left">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-default text-sm text-foreground">
+                            {abbrevClass(s.className)}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {s.className?.trim() ? s.className : "Tanpa kelas"}
+                        </TooltipContent>
+                      </Tooltip>
                     </td>
                   )}
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 text-left">
                     <Input
                       value={s.name}
                       onChange={(e) => onUpdate(s.id, { name: e.target.value })}
-                      className="h-9 min-w-[220px] border-transparent bg-transparent focus:border-primary focus:bg-background"
+                      className="h-9 border-transparent bg-transparent px-0 text-left focus:border-primary focus:bg-background"
                     />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 text-center">
                     <Input
                       type="number"
                       min={0}
@@ -130,7 +133,7 @@ export function PrePostTable({
                             : { posttest: num, score: num ?? NaN };
                         onUpdate(s.id, patch);
                       }}
-                      className="h-9 w-20 font-mono border-transparent bg-transparent focus:border-primary focus:bg-background"
+                      className="mx-auto h-9 w-20 text-center font-mono border-transparent bg-transparent focus:border-primary focus:bg-background"
                       placeholder="0–100"
                     />
                   </td>
