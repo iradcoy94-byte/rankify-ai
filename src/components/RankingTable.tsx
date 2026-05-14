@@ -27,6 +27,16 @@ import { LEARNING_MODELS } from "@/lib/types";
 /** Threshold KKM: ≥ 68 → Tuntas, < 68 → Belum Tuntas */
 const PASS_THRESHOLD = 68;
 
+/** Shorten class label for compact display in the table. */
+function abbrevClass(c?: string): string {
+  if (!c) return "—";
+  const u = c.toUpperCase().trim();
+  if (u.includes("EKSPERIMEN 1") || u === "EKSP 1" || u === "EKSP1") return "EKSP 1";
+  if (u.includes("EKSPERIMEN 2") || u === "EKSP 2" || u === "EKSP2") return "EKSP 2";
+  if (u.includes("KONVENSIONAL") || u === "KONV") return "KONV";
+  return c;
+}
+
 interface RankingTableProps {
   students: Student[];
   onUpdate: (
