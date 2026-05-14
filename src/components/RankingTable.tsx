@@ -27,6 +27,16 @@ import { LEARNING_MODELS } from "@/lib/types";
 /** Threshold KKM: ≥ 68 → Tuntas, < 68 → Belum Tuntas */
 const PASS_THRESHOLD = 68;
 
+/** Shorten class label for compact display in the table. */
+function abbrevClass(c?: string): string {
+  if (!c) return "—";
+  const u = c.toUpperCase().trim();
+  if (u.includes("EKSPERIMEN 1") || u === "EKSP 1" || u === "EKSP1") return "EKSP 1";
+  if (u.includes("EKSPERIMEN 2") || u === "EKSP 2" || u === "EKSP2") return "EKSP 2";
+  if (u.includes("KONVENSIONAL") || u === "KONV") return "KONV";
+  return c;
+}
+
 interface RankingTableProps {
   students: Student[];
   onUpdate: (
@@ -257,25 +267,20 @@ export function RankingTable({
                         <RankBadge rank={s.rank} valid={s.isValid} />
                       </td>
                       {!hideClass && (
-                        <td className="px-3 py-2">
-                          <Input
-                            value={s.className ?? ""}
-                            onChange={(e) =>
-                              onUpdate(s.id, { className: e.target.value })
-                            }
-                            placeholder="cth: EKSP 1"
-                            className="h-9 w-40 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
-                          />
+                        <td className="px-3 py-2 text-left">
+                          <span className="inline-flex items-center rounded-md bg-secondary/60 px-2 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                            {abbrevClass(s.className)}
+                          </span>
                         </td>
                       )}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 text-left">
                         <Input
                           value={s.name}
                           onChange={(e) =>
                             onUpdate(s.id, { name: e.target.value })
                           }
                           placeholder="Nama siswa"
-                          className="h-9 border-transparent bg-transparent focus:border-primary focus:bg-background"
+                          className="h-9 border-transparent bg-transparent px-0 text-left focus:border-primary focus:bg-background"
                         />
                       </td>
                       <td className="px-3 py-2 text-center">
