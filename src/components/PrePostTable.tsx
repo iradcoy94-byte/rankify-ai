@@ -74,9 +74,9 @@ export function PrePostTable({
           <thead className="bg-secondary/40 text-left text-xs uppercase tracking-wide text-foreground/70">
             <tr>
               <th className="w-12 px-3 py-3">No</th>
-              {!hideClass && <th className="w-40 px-3 py-3">Kelas</th>}
-              <th className="min-w-[240px] px-3 py-3 text-left">Nama</th>
-              <th className="w-28 px-3 py-3">Nilai</th>
+              {!hideClass && <th className="w-24 px-3 py-3 text-left">Kelas</th>}
+              <th className="px-3 py-3 text-left">Nama</th>
+              <th className="w-24 px-3 py-3 text-center">Nilai</th>
               <th className="w-32 px-3 py-3">Status</th>
               <th className="w-12 px-3 py-3"></th>
             </tr>
