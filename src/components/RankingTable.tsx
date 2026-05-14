@@ -201,7 +201,7 @@ export function RankingTable({
                 </button>
               </th>
               {!hideClass && (
-                <th className="w-44 px-3 py-3 text-left">
+                <th className="w-24 px-3 py-3 text-left">
                   <button
                     onClick={() => handleSort("class")}
                     className="inline-flex items-center gap-1 hover:text-foreground"

@@ -1,9 +1,23 @@
 import { useMemo } from "react";
 import { CheckCircle2, XCircle, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { Student } from "@/lib/types";
 
 const PASS_THRESHOLD = 68;
+
+function abbrevClass(c?: string): string {
+  if (!c) return "—";
+  const u = c.toUpperCase().trim();
+  if (u.includes("EKSPERIMEN 1") || u === "EKSP 1" || u === "EKSP1") return "EKSP 1";
+  if (u.includes("EKSPERIMEN 2") || u === "EKSP 2" || u === "EKSP2") return "EKSP 2";
+  if (u.includes("KONVENSIONAL") || u === "KONV") return "KONV";
+  return c;
+}
 
 interface Props {
   students: Student[];
@@ -60,9 +74,9 @@ export function PrePostTable({
           <thead className="bg-secondary/40 text-left text-xs uppercase tracking-wide text-foreground/70">
             <tr>
               <th className="w-12 px-3 py-3">No</th>
-              {!hideClass && <th className="w-40 px-3 py-3">Kelas</th>}
-              <th className="min-w-[240px] px-3 py-3 text-left">Nama</th>
-              <th className="w-28 px-3 py-3">Nilai</th>
+              {!hideClass && <th className="w-24 px-3 py-3 text-left">Kelas</th>}
+              <th className="px-3 py-3 text-left">Nama</th>
+              <th className="w-24 px-3 py-3 text-center">Nilai</th>
               <th className="w-32 px-3 py-3">Status</th>
               <th className="w-12 px-3 py-3"></th>
             </tr>
@@ -84,24 +98,27 @@ export function PrePostTable({
                     {i + 1}
                   </td>
                   {!hideClass && (
-                    <td className="px-3 py-2">
-                      <Input
-                        value={s.className ?? ""}
-                        onChange={(e) =>
-                          onUpdate(s.id, { className: e.target.value })
-                        }
-                        className="h-9 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
-                      />
+                    <td className="px-3 py-2 text-left">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-default text-sm text-foreground">
+                            {abbrevClass(s.className)}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {s.className?.trim() ? s.className : "Tanpa kelas"}
+                        </TooltipContent>
+                      </Tooltip>
                     </td>
                   )}
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 text-left">
                     <Input
                       value={s.name}
                       onChange={(e) => onUpdate(s.id, { name: e.target.value })}
-                      className="h-9 min-w-[220px] border-transparent bg-transparent focus:border-primary focus:bg-background"
+                      className="h-9 border-transparent bg-transparent px-0 text-left focus:border-primary focus:bg-background"
                     />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 text-center">
                     <Input
                       type="number"
                       min={0}
@@ -116,7 +133,7 @@ export function PrePostTable({
                             : { posttest: num, score: num ?? NaN };
                         onUpdate(s.id, patch);
                       }}
-                      className="h-9 w-20 font-mono border-transparent bg-transparent focus:border-primary focus:bg-background"
+                      className="mx-auto h-9 w-20 text-center font-mono border-transparent bg-transparent focus:border-primary focus:bg-background"
                       placeholder="0–100"
                     />
                   </td>
