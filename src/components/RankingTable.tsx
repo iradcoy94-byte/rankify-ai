@@ -268,9 +268,16 @@ export function RankingTable({
                       </td>
                       {!hideClass && (
                         <td className="px-3 py-2 text-left">
-                          <span className="inline-flex items-center rounded-md bg-secondary/60 px-2 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-foreground/80">
-                            {abbrevClass(s.className)}
-                          </span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-default text-sm text-foreground">
+                                {abbrevClass(s.className)}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              {s.className?.trim() ? s.className : "Tanpa kelas"}
+                            </TooltipContent>
+                          </Tooltip>
                         </td>
                       )}
                       <td className="px-3 py-2 text-left">
