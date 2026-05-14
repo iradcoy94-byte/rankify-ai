@@ -22,7 +22,7 @@ import type { Student } from "./types";
 
 const SEPARATOR = /[\s:=|\-–—\t]+/;
 // Strip leading list numbering like "1.", "2)", "3 -"
-const LEADING_NUM = /^\s*\d{1,3}\s*[\.\)]\s*/;
+const LEADING_NUM = /^\s*\d{1,3}\s*[.)]\s*/;
 
 // Roman numerals commonly used for SMP/SMA classes
 const ROMAN = "(?:VII|VIII|IX|X|XI|XII)";
@@ -33,7 +33,7 @@ const CLASS_TOKEN_RE = new RegExp(
 );
 // Header-style line like "Kelas: XII IPA 1" or "Kelas 9A"
 const CLASS_HEADER_RE =
-  /^kelas\s*[:\-]?\s*(.+)$/i;
+  /^kelas\s*[:/-/]?\s*(.+)$/i;
 
 /** Returns the class label if the trimmed string is recognisable as a class. */
 function detectClassLabel(s: string): string | null {
