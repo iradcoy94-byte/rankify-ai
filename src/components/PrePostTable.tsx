@@ -1,9 +1,23 @@
 import { useMemo } from "react";
 import { CheckCircle2, XCircle, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { Student } from "@/lib/types";
 
 const PASS_THRESHOLD = 68;
+
+function abbrevClass(c?: string): string {
+  if (!c) return "—";
+  const u = c.toUpperCase().trim();
+  if (u.includes("EKSPERIMEN 1") || u === "EKSP 1" || u === "EKSP1") return "EKSP 1";
+  if (u.includes("EKSPERIMEN 2") || u === "EKSP 2" || u === "EKSP2") return "EKSP 2";
+  if (u.includes("KONVENSIONAL") || u === "KONV") return "KONV";
+  return c;
+}
 
 interface Props {
   students: Student[];
