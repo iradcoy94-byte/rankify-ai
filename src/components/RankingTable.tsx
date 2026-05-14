@@ -257,25 +257,20 @@ export function RankingTable({
                         <RankBadge rank={s.rank} valid={s.isValid} />
                       </td>
                       {!hideClass && (
-                        <td className="px-3 py-2">
-                          <Input
-                            value={s.className ?? ""}
-                            onChange={(e) =>
-                              onUpdate(s.id, { className: e.target.value })
-                            }
-                            placeholder="cth: EKSP 1"
-                            className="h-9 w-40 border-transparent bg-transparent uppercase focus:border-primary focus:bg-background"
-                          />
+                        <td className="px-3 py-2 text-left">
+                          <span className="inline-flex items-center rounded-md bg-secondary/60 px-2 py-1 font-mono text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                            {abbrevClass(s.className)}
+                          </span>
                         </td>
                       )}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 text-left">
                         <Input
                           value={s.name}
                           onChange={(e) =>
                             onUpdate(s.id, { name: e.target.value })
                           }
                           placeholder="Nama siswa"
-                          className="h-9 border-transparent bg-transparent focus:border-primary focus:bg-background"
+                          className="h-9 border-transparent bg-transparent px-0 text-left focus:border-primary focus:bg-background"
                         />
                       </td>
                       <td className="px-3 py-2 text-center">
