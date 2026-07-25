@@ -34,12 +34,13 @@ export default function LoginRole({ role }: Props) {
     setBusy(true);
     const result = login(role, email, password);
     setBusy(false);
-    if (!result.ok) {
+    if (result.ok === false) {
       toast.error(result.error);
       return;
     }
     toast.success(`Selamat datang, ${isGuru ? "Guru" : "Siswa"}!`);
     navigate("/", { replace: true });
+
 
   };
 
