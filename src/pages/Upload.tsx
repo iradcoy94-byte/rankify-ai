@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Uploader } from "@/components/Uploader";
@@ -48,10 +50,14 @@ const CATEGORY_OPTIONS: { value: Category; label: string }[] = [
 const NONE_CLASS = "__none__";
 
 export default function Upload() {
+  const { isReadOnly } = useAuth();
+  if (isReadOnly) return <Navigate to="/peringkat-keseluruhan" replace />;
+
   const { appendStudents, stats } = useStudentsCtx();
   const navigate = useNavigate();
 
   // OCR-specific controls (manual)
+
   const [category, setCategory] = useState<Category>("pretest");
   const [experimentClass, setExperimentClass] = useState<string>(
     EXPERIMENT_CLASSES[0].label,
