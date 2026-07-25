@@ -50,10 +50,14 @@ const CATEGORY_OPTIONS: { value: Category; label: string }[] = [
 const NONE_CLASS = "__none__";
 
 export default function Upload() {
+  const { isReadOnly } = useAuth();
+  if (isReadOnly) return <Navigate to="/peringkat-keseluruhan" replace />;
+
   const { appendStudents, stats } = useStudentsCtx();
   const navigate = useNavigate();
 
   // OCR-specific controls (manual)
+
   const [category, setCategory] = useState<Category>("pretest");
   const [experimentClass, setExperimentClass] = useState<string>(
     EXPERIMENT_CLASSES[0].label,
