@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "rankify-ai-mcp",
+      "version": "0.1.0",
+      "title": "Rankify.AI MCP"
+    },
+    "tools": [
+      {
+        "name": "app_info",
+        "title": "Info aplikasi Rankify.AI",
+        "description": "Menjelaskan apa itu Rankify.AI, halaman-halaman yang tersedia, alur upload data, dan panduan pemakaian fitur.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "description": "Topik yang ingin dijelaskan. 'all' mengembalikan panduan lengkap.",
+              "type": "string",
+              "enum": [
+                "overview",
+                "upload",
+                "ranking",
+                "analysis",
+                "n_gain",
+                "classes",
+                "all"
+              ]
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "compute_ranking",
+        "title": "Kalkulasi ranking & N-Gain",
+        "description": "Menghitung dense ranking dari daftar nilai siswa, dan opsional skor N-Gain Hake dari pretest/posttest. Murni komputasi, tidak mengakses data aplikasi.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "students": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Nama siswa"
+                  },
+                  "score": {
+                    "type": "number",
+                    "description": "Nilai untuk peringkat (0-100)"
+                  },
+                  "pretest": {
+                    "description": "Nilai pretest (opsional)",
+                    "type": "number"
+                  },
+                  "posttest": {
+                    "description": "Nilai posttest (opsional)",
+                    "type": "number"
+                  },
+                  "className": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "score"
+                ]
+              },
+              "description": "Daftar siswa dengan nilai."
+            },
+            "mode": {
+              "description": "Cara ranking. 'global' = dense ranking lintas kelas, 'per_class' = per className. Default: global.",
+              "type": "string",
+              "enum": [
+                "global",
+                "per_class"
+              ]
+            }
+          },
+          "required": [
+            "students"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "analyze_scores",
+        "title": "Analisis nilai matematika",
+        "description": "Menganalisis distribusi nilai matematika: rata-rata, min, max, median, ketuntasan KKM 68, dan rekomendasi belajar berdasarkan sebaran.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "scores": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Daftar nilai siswa (0-100)."
+            },
+            "kkm": {
+              "description": "Batas ketuntasan minimum. Default 68.",
+              "type": "number"
+            },
+            "label": {
+              "description": "Label pengukuran (mis. 'Pre-test EKSP 1').",
+              "type": "string"
+            }
+          },
+          "required": [
+            "scores"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
