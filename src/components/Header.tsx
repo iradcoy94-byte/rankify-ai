@@ -1,15 +1,23 @@
 import { motion } from "framer-motion";
 import { NavLink } from "react-router-dom";
+import { LogOut, GraduationCap, UserRound } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
-const NAV_ITEMS = [
-  { to: "/", label: "Beranda", end: true },
-  { to: "/upload", label: "Input Data" },
-  { to: "/peringkat-keseluruhan", label: "Hasil Keseluruhan" },
-  { to: "/peringkat-kelas", label: "Hasil per Kelas" },
-  { to: "/analisis", label: "Analisis Peningkatan" },
+const BASE_NAV = [
+  { to: "/", label: "Beranda", end: true, guruOnly: false },
+  { to: "/upload", label: "Input Data", guruOnly: true },
+  { to: "/peringkat-keseluruhan", label: "Hasil Keseluruhan", guruOnly: false },
+  { to: "/peringkat-kelas", label: "Hasil per Kelas", guruOnly: false },
+  { to: "/analisis", label: "Analisis Peningkatan", guruOnly: false },
 ];
 
+
 export function Header() {
+  const { session, logout } = useAuth();
+  const isGuru = session?.role === "guru";
+  const navItems = BASE_NAV.filter((item) => (item.guruOnly ? isGuru : true));
+  const RoleIcon = isGuru ? GraduationCap : UserRound;
+
   return (
     <header className="sticky top-0 z-30 border-b border-border/40 bg-background/70 backdrop-blur-xl">
       <div className="container flex flex-wrap items-center justify-between gap-4 py-4">
@@ -36,7 +44,7 @@ export function Header() {
 
         {/* Page navigation */}
         <nav className="order-3 flex w-full flex-wrap items-center gap-1 md:order-2 md:w-auto">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -54,11 +62,31 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="order-2 hidden items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs text-muted-foreground backdrop-blur md:order-3 md:flex">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-success" />
-          Inspired by Irsyad
+        <div className="order-2 flex items-center gap-2 md:order-3">
+          {session && (
+            <div className="hidden items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur sm:flex">
+              <RoleIcon className="h-3.5 w-3.5 text-primary" />
+              <span className="font-medium capitalize text-foreground">
+                {session.role}
+              </span>
+              {!isGuru && (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px]">
+                  read-only
+                </span>
+              )}
+            </div>
+          )}
+          <button
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur transition-smooth hover:border-destructive/60 hover:text-destructive"
+            aria-label="Keluar"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Keluar
+          </button>
         </div>
       </div>
     </header>
   );
 }
+
