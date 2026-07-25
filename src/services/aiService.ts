@@ -1,10 +1,11 @@
 import type { ChatMessage, Student } from "@/lib/types";
+import { api, getToken } from "@/services/api";
 
 /**
  * Streams an AI Assistant reply from the backend edge function.
  * Yields incremental text deltas via onDelta — never buffers the entire response.
  */
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
+const CHAT_URL = api.chatUrl();
 
 interface StreamArgs {
   messages: ChatMessage[];
@@ -25,7 +26,7 @@ export async function streamAssistant({
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      Authorization: `Bearer ${getToken() ?? ""}`,
     },
     body: JSON.stringify({ messages, students }),
   });

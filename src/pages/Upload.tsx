@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Uploader } from "@/components/Uploader";
@@ -11,7 +11,6 @@ import {
   UploadCloud,
   Sparkles,
   ShieldCheck,
-  Tag,
   Camera,
   FileSpreadsheet,
   Layers,
@@ -27,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import type { Student, LearningModel } from "@/lib/types";
 import { EXPERIMENT_CLASSES } from "@/lib/types";
+import { useAuth } from "@/context/AuthContext";
 
 /**
  * Upload page — dua metode input:
@@ -49,6 +49,7 @@ const NONE_CLASS = "__none__";
 
 export default function Upload() {
   const { appendStudents, stats } = useStudentsCtx();
+  const { canManageData } = useAuth();
   const navigate = useNavigate();
 
   // OCR-specific controls (manual)
@@ -98,6 +99,10 @@ export default function Upload() {
     toast.success(`${students.length} records diimport dari Excel`);
     navigate("/peringkat-keseluruhan");
   };
+
+  if (!canManageData) {
+    return <Navigate to="/peringkat-keseluruhan" replace />;
+  }
 
   return (
     <section className="container mt-8 grid gap-10 lg:grid-cols-[1fr_1.25fr]">

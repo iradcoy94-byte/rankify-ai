@@ -23,7 +23,7 @@ const NONE = "__none__";
 
 /** Per-class ranking with class filter. */
 export default function ClassRanking() {
-  const { students, classes, updateField, removeRow, addRow } =
+  const { students, classes, updateField, removeRow, addRow, canManageData } =
     useStudentsCtx();
   const [classFilter, setClassFilter] = useState<string>(NONE);
   const [meetingFilter, setMeetingFilter] = useState<number | "all">("all");
@@ -121,6 +121,7 @@ export default function ClassRanking() {
             meetingOptions={meetingOptions}
             meetingFilter={meetingFilter}
             onMeetingFilterChange={setMeetingFilter}
+            readOnly={!canManageData}
           />
 
           <TopRankersTable
@@ -137,6 +138,7 @@ export default function ClassRanking() {
               onUpdate={updateField}
               onRemove={removeRow}
               hideClass
+              readOnly={!canManageData}
             />
             <PrePostTable
               students={classFilteredAll}
@@ -144,6 +146,7 @@ export default function ClassRanking() {
               onUpdate={updateField}
               onRemove={removeRow}
               hideClass
+              readOnly={!canManageData}
             />
           </div>
 

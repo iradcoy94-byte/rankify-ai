@@ -15,7 +15,7 @@ import { recomputeGlobal } from "@/lib/ranking";
 
 /** Overall ranking across all classes. */
 export default function OverallRanking() {
-  const { students, stats, updateField, removeRow, addRow, clear } =
+  const { students, stats, updateField, removeRow, addRow, clear, canManageData } =
     useStudentsCtx();
   const [meetingFilter, setMeetingFilter] = useState<number | "all">("all");
 
@@ -55,7 +55,7 @@ export default function OverallRanking() {
             <StatChip icon={<CheckCircle2 className="h-3.5 w-3.5 text-success" />} label="Valid" value={stats.valid} />
             <StatChip icon={<AlertTriangle className="h-3.5 w-3.5 text-destructive" />} label="Invalid" value={stats.invalid} />
             <StatChip icon={<TrendingUp className="h-3.5 w-3.5 text-primary" />} label="Rata-rata" value={stats.avg} />
-            <Button variant="outline" size="sm" onClick={clear}>Reset</Button>
+            {canManageData && <Button variant="outline" size="sm" onClick={clear}>Reset</Button>}
           </div>
         )}
       </div>
@@ -74,6 +74,7 @@ export default function OverallRanking() {
             meetingOptions={meetingOptions}
             meetingFilter={meetingFilter}
             onMeetingFilterChange={setMeetingFilter}
+            readOnly={!canManageData}
           />
 
           <TopRankersTable students={meetingRowsAll} />
@@ -84,12 +85,14 @@ export default function OverallRanking() {
               kind="pretest"
               onUpdate={updateField}
               onRemove={removeRow}
+              readOnly={!canManageData}
             />
             <PrePostTable
               students={students}
               kind="posttest"
               onUpdate={updateField}
               onRemove={removeRow}
+              readOnly={!canManageData}
             />
           </div>
 

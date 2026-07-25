@@ -31,6 +31,7 @@ interface Props {
   ) => void;
   onRemove: (id: string) => void;
   hideClass?: boolean;
+  readOnly?: boolean;
 }
 
 /**
@@ -44,6 +45,7 @@ export function PrePostTable({
   onUpdate,
   onRemove,
   hideClass = false,
+  readOnly = false,
 }: Props) {
   const rows = useMemo(() => {
     return students.filter((s) => {
@@ -115,6 +117,7 @@ export function PrePostTable({
                     <Input
                       value={s.name}
                       onChange={(e) => onUpdate(s.id, { name: e.target.value })}
+                      disabled={readOnly}
                       className="h-9 border-transparent bg-transparent px-0 text-left focus:border-primary focus:bg-background"
                     />
                   </td>
@@ -133,6 +136,7 @@ export function PrePostTable({
                             : { posttest: num, score: num ?? NaN };
                         onUpdate(s.id, patch);
                       }}
+                      disabled={readOnly}
                       className="mx-auto h-9 w-20 text-center font-mono border-transparent bg-transparent focus:border-primary focus:bg-background"
                       placeholder="0–100"
                     />
@@ -153,13 +157,15 @@ export function PrePostTable({
                     )}
                   </td>
                   <td className="px-2 py-2">
-                    <button
-                      onClick={() => onRemove(s.id)}
-                      className="rounded-md p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
-                      aria-label="Hapus baris"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => onRemove(s.id)}
+                        className="rounded-md p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+                        aria-label="Hapus baris"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

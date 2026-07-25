@@ -63,6 +63,7 @@ interface RankingTableProps {
   meetingFilter?: number | "all";
   /** Notifies parent when meeting filter changes. */
   onMeetingFilterChange?: (val: number | "all") => void;
+  readOnly?: boolean;
 }
 
 type SortKey = "rank" | "name" | "score" | "class" | "meeting";
@@ -81,6 +82,7 @@ export function RankingTable({
   meetingOptions,
   meetingFilter,
   onMeetingFilterChange,
+  readOnly = false,
 }: RankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -181,9 +183,11 @@ export function RankingTable({
               </Select>
             </div>
           )}
-          <Button variant="outline" size="sm" onClick={onAdd}>
-            <Plus className="h-4 w-4" /> Tambah baris
-          </Button>
+          {!readOnly && (
+            <Button variant="outline" size="sm" onClick={onAdd}>
+              <Plus className="h-4 w-4" /> Tambah baris
+            </Button>
+          )}
         </div>
       </div>
 
@@ -291,6 +295,7 @@ export function RankingTable({
                           onChange={(e) =>
                             onUpdate(s.id, { name: e.target.value })
                           }
+                          disabled={readOnly}
                           placeholder="Nama siswa"
                           className="h-9 border-transparent bg-transparent px-0 text-left focus:border-primary focus:bg-background"
                         />
@@ -308,6 +313,7 @@ export function RankingTable({
                                   : Math.max(1, Number(e.target.value)),
                             })
                           }
+                          disabled={readOnly}
                           className="mx-auto h-9 w-16 text-center font-mono border-transparent bg-transparent focus:border-primary focus:bg-background"
                         />
                       </td>
@@ -323,6 +329,7 @@ export function RankingTable({
                               score: v === "" ? NaN : Number(v),
                             });
                           }}
+                          disabled={readOnly}
                           placeholder="0–100"
                           className={`mx-auto h-9 w-20 text-center font-mono border-transparent bg-transparent focus:border-primary focus:bg-background ${
                             !s.isValid ? "text-destructive" : ""
@@ -345,13 +352,15 @@ export function RankingTable({
                         )}
                       </td>
                       <td className="px-2 py-2">
-                        <button
-                          onClick={() => onRemove(s.id)}
-                          className="rounded-md p-2 text-muted-foreground transition-smooth hover:bg-destructive/15 hover:text-destructive"
-                          aria-label="Hapus baris"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {!readOnly && (
+                          <button
+                            onClick={() => onRemove(s.id)}
+                            className="rounded-md p-2 text-muted-foreground transition-smooth hover:bg-destructive/15 hover:text-destructive"
+                            aria-label="Hapus baris"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </td>
                     </motion.tr>
 
@@ -371,6 +380,7 @@ export function RankingTable({
                                 onValueChange={(v) =>
                                   onUpdate(s.id, { model: v as LearningModel })
                                 }
+                                disabled={readOnly}
                               >
                                 <SelectTrigger className="h-9">
                                   <SelectValue placeholder="Pilih model…" />
@@ -401,6 +411,7 @@ export function RankingTable({
                                     pretest: v === "" ? undefined : Number(v),
                                   });
                                 }}
+                                disabled={readOnly}
                                 className="h-9 font-mono"
                                 placeholder="—"
                               />
@@ -422,6 +433,7 @@ export function RankingTable({
                                     posttest: v === "" ? undefined : Number(v),
                                   });
                                 }}
+                                disabled={readOnly}
                                 className="h-9 font-mono"
                                 placeholder="—"
                               />
