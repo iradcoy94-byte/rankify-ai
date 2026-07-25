@@ -40,6 +40,7 @@ export default function LoginRole({ role }: Props) {
     }
     toast.success(`Selamat datang, ${isGuru ? "Guru" : "Siswa"}!`);
     navigate("/", { replace: true });
+
   };
 
   const accent = isGuru
