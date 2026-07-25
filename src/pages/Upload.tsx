@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Uploader } from "@/components/Uploader";
@@ -26,7 +28,6 @@ import {
 } from "@/components/ui/select";
 import type { Student, LearningModel } from "@/lib/types";
 import { EXPERIMENT_CLASSES } from "@/lib/types";
-import { useAuth } from "@/context/AuthContext";
 
 /**
  * Upload page — dua metode input:
@@ -48,11 +49,15 @@ const CATEGORY_OPTIONS: { value: Category; label: string }[] = [
 const NONE_CLASS = "__none__";
 
 export default function Upload() {
+  const { isReadOnly } = useAuth();
   const { appendStudents, stats } = useStudentsCtx();
-  const { canManageData } = useAuth();
   const navigate = useNavigate();
 
+  if (isReadOnly) {
+    return <Navigate to="/peringkat-keseluruhan" replace />;
+  }
   // OCR-specific controls (manual)
+
   const [category, setCategory] = useState<Category>("pretest");
   const [experimentClass, setExperimentClass] = useState<string>(
     EXPERIMENT_CLASSES[0].label,
@@ -100,9 +105,6 @@ export default function Upload() {
     navigate("/peringkat-keseluruhan");
   };
 
-  if (!canManageData) {
-    return <Navigate to="/peringkat-keseluruhan" replace />;
-  }
 
   return (
     <section className="container mt-8 grid gap-10 lg:grid-cols-[1fr_1.25fr]">

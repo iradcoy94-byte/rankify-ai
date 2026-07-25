@@ -1,22 +1,25 @@
 import { motion } from "framer-motion";
 import { NavLink } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { motion } from "framer-motion";
+import { NavLink } from "react-router-dom";
+import { LogOut, GraduationCap, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
-const NAV_ITEMS = [
-  { to: "/", label: "Beranda", end: true },
-  { to: "/upload", label: "Input Data" },
-  { to: "/peringkat-keseluruhan", label: "Hasil Keseluruhan" },
-  { to: "/peringkat-kelas", label: "Hasil per Kelas" },
-  { to: "/analisis", label: "Analisis Peningkatan" },
+const BASE_NAV = [
+  { to: "/", label: "Beranda", end: true, guruOnly: false },
+  { to: "/upload", label: "Input Data", guruOnly: true },
+  { to: "/peringkat-keseluruhan", label: "Hasil Keseluruhan", guruOnly: false },
+  { to: "/peringkat-kelas", label: "Hasil per Kelas", guruOnly: false },
+  { to: "/analisis", label: "Analisis Peningkatan", guruOnly: false },
 ];
 
+
 export function Header() {
-  const { user, canManageData, logout } = useAuth();
-  const navItems = canManageData
-    ? NAV_ITEMS
-    : NAV_ITEMS.filter((item) => item.to !== "/upload");
+  const { session, logout } = useAuth();
+  const isGuru = session?.role === "guru";
+  const navItems = BASE_NAV.filter((item) => (item.guruOnly ? isGuru : true));
+  const RoleIcon = isGuru ? GraduationCap : UserRound;
 
   return (
     <header className="sticky top-0 z-30 border-b border-border/40 bg-background/70 backdrop-blur-xl">
@@ -63,11 +66,25 @@ export function Header() {
         </nav>
 
         <div className="order-2 flex items-center gap-2 md:order-3">
-          <div className="hidden items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs text-muted-foreground backdrop-blur md:flex">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-success" />
-            {user?.role === "guru" ? "Guru" : "Peserta Didik"}
-          </div>
-          <Button variant="outline" size="icon" onClick={logout} aria-label="Keluar">
+          {session && (
+            <div className="hidden items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur sm:flex">
+              <RoleIcon className="h-3.5 w-3.5 text-primary" />
+              <span className="font-medium capitalize text-foreground">
+                {session.role}
+              </span>
+              {!isGuru && (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px]">
+                  read-only
+                </span>
+              )}
+            </div>
+          )}
+          <Button
+              variant="outline"
+              size="icon"
+              onClick={logout}
+            aria-label="Keluar"
+>
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
@@ -75,3 +92,4 @@ export function Header() {
     </header>
   );
 }
+
