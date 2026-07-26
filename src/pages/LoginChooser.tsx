@@ -13,14 +13,14 @@ export default function LoginChooser() {
       to: "/login/guru",
       icon: GraduationCap,
       title: "Masuk sebagai Guru",
-      desc: "Akses penuh: unggah nilai, edit data, jalankan analisis, dan gunakan AI Assistant.",
+      desc: "Unggah nilai, edit data, dan jalankan analisis para peserta didik.",
       gradient: "from-primary/25 via-primary/10 to-transparent",
     },
     {
       to: "/login/siswa",
       icon: UserRound,
-      title: "Masuk sebagai Siswa",
-      desc: "Mode read-only: lihat peringkat, hasil per kelas, dan analisis peningkatan kelasmu.",
+      title: "Masuk sebagai Peserta Didik",
+      desc: "Tanya jawab dengan AI Assitant, lihat peringkatmu, dan analisis peningkatanmu.",
       gradient: "from-accent/25 via-accent/10 to-transparent",
     },
   ];

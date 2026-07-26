@@ -81,7 +81,7 @@ export default function Login() {
 
         <div className="mt-5 rounded-xl border border-border/70 bg-background/60 p-3 text-xs text-muted-foreground">
           Akun awal: <strong>guru@rankify.test</strong> atau{" "}
-          <strong>siswa@rankify.test</strong>. Password:{" "}
+          <strong>pesertadidik@rankify.test</strong>. Password:{" "}
           <strong>rankify123</strong>.
         </div>
       </form>

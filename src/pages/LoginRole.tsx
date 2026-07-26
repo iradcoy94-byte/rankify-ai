@@ -38,7 +38,7 @@ export default function LoginRole({ role }: Props) {
       toast.error(result.error);
       return;
     }
-    toast.success(`Selamat datang, ${isGuru ? "Guru" : "Siswa"}!`);
+    toast.success(`Selamat datang, ${isGuru ? "Guru" : "Peserta Didik"}!`);
     navigate("/", { replace: true });
 
 
@@ -72,12 +72,12 @@ export default function LoginRole({ role }: Props) {
             </div>
             <div>
               <h1 className="text-xl font-bold">
-                Masuk sebagai {isGuru ? "Guru" : "Siswa"}
+                Masuk sebagai {isGuru ? "Guru" : "Peserta Didik"}
               </h1>
               <p className="text-xs text-muted-foreground">
                 {isGuru
                   ? "Akses penuh untuk mengelola nilai & analisis."
-                  : "Mode read-only untuk melihat ranking & analisis."}
+                  : "Akses terbatas read-only untuk melihat ranking & analisis."}
               </p>
             </div>
           </div>
