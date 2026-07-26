@@ -18,8 +18,13 @@ interface Session {
 
 interface AuthCtx {
   session: Session | null;
+  user: Session | null;
   isReadOnly: boolean;
-  login: (role: Role, email: string, password: string) => { ok: true } | { ok: false; error: string };
+  canManageData: boolean;
+  login: {
+    (role: Role, email: string, password: string): { ok: true } | { ok: false; error: string };
+    (email: string, password: string): { ok: true } | { ok: false; error: string };
+  };
   logout: () => void;
 }
 
@@ -49,7 +54,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else localStorage.removeItem(STORAGE_KEY);
   }, [session]);
 
-  const login: AuthCtx["login"] = useCallback((role, email, password) => {
+  const login = useCallback<AuthCtx["login"]>((roleOrEmail, emailOrPassword, passwordArg) => {
+    const role =
+      passwordArg === undefined
+        ? roleOrEmail.trim().toLowerCase() === CREDENTIALS.siswa.email
+          ? "siswa"
+          : "guru"
+        : roleOrEmail;
+    const email = passwordArg === undefined ? roleOrEmail : emailOrPassword;
+    const password = passwordArg === undefined ? emailOrPassword : passwordArg;
+
     const c = CREDENTIALS[role];
     if (!c) return { ok: false, error: "Peran tidak dikenal." };
     if (email.trim().toLowerCase() !== c.email || password !== c.password) {
@@ -64,7 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthCtx>(
     () => ({
       session,
+      user: session,
       isReadOnly: session?.role === "siswa",
+      canManageData: session?.role === "guru",
       login,
       logout,
     }),

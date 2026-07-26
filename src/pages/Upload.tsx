@@ -53,9 +53,6 @@ export default function Upload() {
   const { appendStudents, stats } = useStudentsCtx();
   const navigate = useNavigate();
 
-  if (isReadOnly) {
-    return <Navigate to="/peringkat-keseluruhan" replace />;
-  }
   // OCR-specific controls (manual)
 
   const [category, setCategory] = useState<Category>("pretest");
@@ -63,6 +60,10 @@ export default function Upload() {
     EXPERIMENT_CLASSES[0].label,
   );
   const [fallbackClass, setFallbackClass] = useState<string>("");
+
+  if (isReadOnly) {
+    return <Navigate to="/peringkat-keseluruhan" replace />;
+  }
 
   const resolveClassMeta = (): { className?: string; model?: LearningModel } => {
     if (experimentClass === NONE_CLASS) {

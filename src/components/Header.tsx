@@ -1,7 +1,5 @@
 import { motion } from "framer-motion";
 import { NavLink } from "react-router-dom";
-import { motion } from "framer-motion";
-import { NavLink } from "react-router-dom";
 import { LogOut, GraduationCap, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -79,12 +77,7 @@ export function Header() {
               )}
             </div>
           )}
-          <Button
-              variant="outline"
-              size="icon"
-              onClick={logout}
-            aria-label="Keluar"
->
+          <Button variant="outline" size="icon" onClick={logout} aria-label="Keluar">
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
