@@ -10,11 +10,6 @@ interface Props {
   role: Role;
 }
 
-/**
- * Shared login form used by /login/guru and /login/siswa.
- * Each role gets its own visual identity, its own prefilled demo email,
- * and its own copy.
- */
 export default function LoginRole({ role }: Props) {
   const { session, login } = useAuth();
   const navigate = useNavigate();
