@@ -6,6 +6,47 @@ import { recompute, uid, validateStudent } from "@/lib/ranking";
 import type { Student } from "@/lib/types";
 
 const hasBackendSession = () => Boolean(getToken());
+const LOCAL_STUDENTS_KEY = "rankify.students.shared.v1";
+
+function normalizeStoredStudent(row: Student): Student {
+  return {
+    ...row,
+    score:
+      row.score === null || row.score === undefined ? NaN : Number(row.score),
+    meeting:
+      row.meeting === null || row.meeting === undefined
+        ? undefined
+        : Number(row.meeting),
+    pretest:
+      row.pretest === null || row.pretest === undefined
+        ? undefined
+        : Number(row.pretest),
+    posttest:
+      row.posttest === null || row.posttest === undefined
+        ? undefined
+        : Number(row.posttest),
+  };
+}
+
+function loadLocalStudents(): Student[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STUDENTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return recompute(parsed.map(normalizeStoredStudent));
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalStudents(rows: Student[]) {
+  try {
+    localStorage.setItem(LOCAL_STUDENTS_KEY, JSON.stringify(rows));
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+}
 
 /**
  * useStudents — single source of truth for the student list.
@@ -13,24 +54,41 @@ const hasBackendSession = () => Boolean(getToken());
  */
 export function useStudents(initial: Student[] = []) {
   const { canManageData, user } = useAuth();
-  const [students, setStudents] = useState<Student[]>(() => recompute(initial));
+  const [students, setStudents] = useState<Student[]>(() => {
+    const localRows = loadLocalStudents();
+    return localRows.length > 0 ? localRows : recompute(initial);
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const studentsRef = useRef(students);
+
   useEffect(() => {
     studentsRef.current = students;
   }, [students]);
 
+  const commitStudents = useCallback((next: Student[]) => {
+    const recomputed = recompute(next);
+    studentsRef.current = recomputed;
+    setStudents(recomputed);
+    saveLocalStudents(recomputed);
+    return recomputed;
+  }, []);
+
   useEffect(() => {
     if (!user) return;
-    if (!hasBackendSession()) return;
+    if (!hasBackendSession()) {
+      commitStudents(loadLocalStudents());
+      return;
+    }
+
     let active = true;
     setIsSyncing(true);
     api
       .listStudents()
       .then((rows) => {
-        if (active) setStudents(recompute(rows));
+        if (active) commitStudents(rows);
       })
       .catch((error) => {
+        if (active) commitStudents(loadLocalStudents());
         toast.error(error instanceof Error ? error.message : "Gagal memuat data siswa");
       })
       .finally(() => {
@@ -39,7 +97,17 @@ export function useStudents(initial: Student[] = []) {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [user, commitStudents]);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === LOCAL_STUDENTS_KEY && !hasBackendSession()) {
+        commitStudents(loadLocalStudents());
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [commitStudents]);
 
   const denyReadonly = useCallback(() => {
     toast.warning("Akun peserta didik hanya bisa melihat data dan memakai Chatbot AI.");
@@ -48,8 +116,7 @@ export function useStudents(initial: Student[] = []) {
   /** Replace the whole list (rarely used; prefer appendStudents) */
   const replaceAll = useCallback(async (next: Student[]) => {
     if (!canManageData) return denyReadonly();
-    const recomputed = recompute(next);
-    setStudents(recompute(next));
+    const recomputed = commitStudents(next);
     if (!hasBackendSession()) return;
     try {
       await api.clearStudents();
@@ -57,7 +124,7 @@ export function useStudents(initial: Student[] = []) {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menyimpan data");
     }
-  }, [canManageData, denyReadonly]);
+  }, [canManageData, commitStudents, denyReadonly]);
 
   /**
    * Append new rows to the existing list (default behaviour for OCR / camera).
@@ -66,14 +133,14 @@ export function useStudents(initial: Student[] = []) {
   const appendStudents = useCallback(async (incoming: Student[]) => {
     if (!canManageData) return denyReadonly();
     const rows = recompute(incoming);
-    setStudents((prev) => recompute([...prev, ...rows]));
+    commitStudents([...studentsRef.current, ...rows]);
     if (!hasBackendSession()) return;
     try {
       await api.saveStudents(rows);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menyimpan data siswa");
     }
-  }, [canManageData, denyReadonly]);
+  }, [canManageData, commitStudents, denyReadonly]);
 
   /** Update a single field on a row */
   const updateField = useCallback(
@@ -90,7 +157,7 @@ export function useStudents(initial: Student[] = []) {
       const current = studentsRef.current.find((s) => s.id === id);
       if (!current) return;
       const updated = validateStudent({ ...current, ...patch });
-      setStudents((prev) => recompute(prev.map((s) => (s.id === id ? updated : s))));
+      commitStudents(studentsRef.current.map((s) => (s.id === id ? updated : s)));
       if (!hasBackendSession()) return;
       try {
         await api.updateStudent(id, updated);
@@ -98,20 +165,20 @@ export function useStudents(initial: Student[] = []) {
         toast.error(error instanceof Error ? error.message : "Gagal memperbarui data");
       }
     },
-    [canManageData, denyReadonly],
+    [canManageData, commitStudents, denyReadonly],
   );
 
   /** Remove a row */
   const removeRow = useCallback(async (id: string) => {
     if (!canManageData) return denyReadonly();
-    setStudents((prev) => recompute(prev.filter((s) => s.id !== id)));
+    commitStudents(studentsRef.current.filter((s) => s.id !== id));
     if (!hasBackendSession()) return;
     try {
       await api.deleteStudent(id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menghapus data");
     }
-  }, [canManageData, denyReadonly]);
+  }, [canManageData, commitStudents, denyReadonly]);
 
   /** Add an empty row for manual entry, optionally pre-filled with a class */
   const addRow = useCallback(async (className?: string) => {
@@ -124,26 +191,26 @@ export function useStudents(initial: Student[] = []) {
       rank: 0,
       isValid: false,
     };
-    setStudents((prev) => recompute([...prev, row]));
+    commitStudents([...studentsRef.current, row]);
     if (!hasBackendSession()) return;
     try {
       await api.saveStudents([row]);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menambah baris");
     }
-  }, [canManageData, denyReadonly]);
+  }, [canManageData, commitStudents, denyReadonly]);
 
   /** Reset everything */
   const clear = useCallback(async () => {
     if (!canManageData) return denyReadonly();
-    setStudents([]);
+    commitStudents([]);
     if (!hasBackendSession()) return;
     try {
       await api.clearStudents();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal reset data");
     }
-  }, [canManageData, denyReadonly]);
+  }, [canManageData, commitStudents, denyReadonly]);
 
   /** Quick stats for header chips (computed across ALL students) */
   const stats = useMemo(() => {
