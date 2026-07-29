@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { api, clearToken, setToken } from "@/services/api";
 
 export type Role = "guru" | "siswa";
 
@@ -22,8 +23,8 @@ interface AuthCtx {
   isReadOnly: boolean;
   canManageData: boolean;
   login: {
-    (role: Role, email: string, password: string): { ok: true } | { ok: false; error: string };
-    (email: string, password: string): { ok: true } | { ok: false; error: string };
+    (role: Role, email: string, password: string): Promise<{ ok: true } | { ok: false; error: string }>;
+    (email: string, password: string): Promise<{ ok: true } | { ok: false; error: string }>;
   };
   logout: () => void;
 }
@@ -37,6 +38,9 @@ const CREDENTIALS: Record<Role, { email: string; password: string; name: string 
   guru: { email: "guru@rankify.test", password: "rankify123", name: "Guru Rankify" },
   siswa: { email: "siswa@rankify.test", password: "rankify123", name: "Siswa Rankify" },
 };
+
+const apiRoleToAppRole = (role: string): Role =>
+  role === "peserta_didik" ? "siswa" : "guru";
 
 const Ctx = createContext<AuthCtx | null>(null);
 
@@ -61,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [session]);
 
-  const login = useCallback<AuthCtx["login"]>((roleOrEmail, emailOrPassword, passwordArg) => {
+  const login = useCallback<AuthCtx["login"]>(async (roleOrEmail, emailOrPassword, passwordArg) => {
     const role =
       passwordArg === undefined
         ? roleOrEmail.trim().toLowerCase() === CREDENTIALS.siswa.email
@@ -76,11 +80,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (email.trim().toLowerCase() !== c.email || password !== c.password) {
       return { ok: false, error: "Email atau kata sandi salah." };
     }
-    setSession({ role, email: c.email, name: c.name });
+
+    try {
+      const result = await api.login(c.email, password);
+      setToken(result.token);
+      setSession({
+        role: apiRoleToAppRole(result.user.role),
+        email: result.user.email,
+        name: result.user.name,
+      });
+      return { ok: true };
+    } catch {
+      clearToken();
+      setSession({ role, email: c.email, name: c.name });
+    }
+
     return { ok: true };
   }, []);
 
   const logout = useCallback(() => {
+    void api.logout().catch(() => {
+      // Local logout should still work even when the backend is offline.
+    });
+    clearToken();
     try {
       localStorage.removeItem(LEGACY_STORAGE_KEY);
       sessionStorage.removeItem(SESSION_STORAGE_KEY);

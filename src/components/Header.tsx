@@ -4,19 +4,24 @@ import { LogOut, GraduationCap, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
-const BASE_NAV = [
-  { to: "/", label: "Beranda", end: true, guruOnly: false },
-  { to: "/upload", label: "Input Data", guruOnly: true },
-  { to: "/peringkat-keseluruhan", label: "Hasil Keseluruhan", guruOnly: false },
-  { to: "/peringkat-kelas", label: "Hasil per Kelas", guruOnly: false },
-  { to: "/analisis", label: "Analisis Peningkatan", guruOnly: false },
+const TEACHER_NAV = [
+  { to: "/", label: "Beranda", end: true },
+  { to: "/upload", label: "Input Data" },
+  { to: "/peringkat-keseluruhan", label: "Hasil Keseluruhan" },
+  { to: "/peringkat-kelas", label: "Hasil per Kelas" },
+  { to: "/analisis", label: "Analisis Peningkatan" },
 ];
 
+const STUDENT_NAV = [
+  { to: "/", label: "AI Assistant", end: true },
+  { to: "/peringkat-keseluruhan", label: "Peringkat Saya" },
+  { to: "/analisis", label: "Peningkatan Saya" },
+];
 
 export function Header() {
   const { session, logout } = useAuth();
   const isGuru = session?.role === "guru";
-  const navItems = BASE_NAV.filter((item) => (item.guruOnly ? isGuru : true));
+  const navItems = isGuru ? TEACHER_NAV : STUDENT_NAV;
   const RoleIcon = isGuru ? GraduationCap : UserRound;
 
   return (
@@ -38,12 +43,11 @@ export function Header() {
               Rankify<span className="text-gradient-primary">.AI</span>
             </h1>
             <p className="text-xs text-muted-foreground">
-              Ranking · Insight AI · Analysis
+              {isGuru ? "Ranking - Insight AI - Analysis" : "AI Matematika - Ranking"}
             </p>
           </div>
         </motion.div>
 
-        {/* Page navigation */}
         <nav className="order-3 flex w-full flex-wrap items-center gap-1 md:order-2 md:w-auto">
           {navItems.map((item) => (
             <NavLink
@@ -72,7 +76,7 @@ export function Header() {
               </span>
               {!isGuru && (
                 <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px]">
-                  read-only
+                  AI-first
                 </span>
               )}
             </div>
@@ -85,4 +89,3 @@ export function Header() {
     </header>
   );
 }
-

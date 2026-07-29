@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { AIAssistant } from "@/components/AIAssistant";
 import { useStudentsCtx } from "@/context/StudentsContext";
+import { useAuth } from "@/context/AuthContext";
 
 /**
  * AppLayout — shared chrome (header + floating AI assistant) around all
@@ -9,11 +10,14 @@ import { useStudentsCtx } from "@/context/StudentsContext";
  */
 export default function AppLayout() {
   const { students } = useStudentsCtx();
+  const { session } = useAuth();
+  const showFloatingAssistant = session?.role === "guru";
+
   return (
-    <main className="relative min-h-screen pb-32">
+    <main className={`relative min-h-screen ${showFloatingAssistant ? "pb-32" : ""}`}>
       <Header />
       <Outlet />
-      <AIAssistant students={students} />
+      {showFloatingAssistant && <AIAssistant students={students} />}
     </main>
   );
 }

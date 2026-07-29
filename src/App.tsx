@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import type { ReactNode } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { StudentsProvider } from "@/context/StudentsContext";
 import RequireAuth from "@/components/RequireAuth";
 import AppLayout from "@/layouts/AppLayout";
@@ -14,6 +16,7 @@ import ClassRanking from "./pages/ClassRanking";
 import Analysis from "./pages/Analysis";
 import LoginChooser from "./pages/LoginChooser";
 import LoginRole from "./pages/LoginRole";
+import StudentAssistant from "./pages/StudentAssistant";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -33,8 +36,8 @@ const App = () => (
 
               <Route element={<RequireAuth />}>
                 <Route element={<AppLayout />}>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/upload" element={<Upload />} />
+                  <Route path="/" element={<RoleHome />} />
+                  <Route path="/upload" element={<TeacherOnly><Upload /></TeacherOnly>} />
                   <Route path="/peringkat-keseluruhan" element={<OverallRanking />} />
                   <Route path="/peringkat-kelas" element={<ClassRanking />} />
                   <Route path="/analisis" element={<Analysis />} />
@@ -52,3 +55,14 @@ const App = () => (
 );
 
 export default App;
+
+function RoleHome() {
+  const { session } = useAuth();
+  return session?.role === "siswa" ? <StudentAssistant /> : <Home />;
+}
+
+function TeacherOnly({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
+  if (session?.role !== "guru") return <Navigate to="/" replace />;
+  return <>{children}</>;
+}

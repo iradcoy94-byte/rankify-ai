@@ -24,19 +24,17 @@ export default function LoginRole({ role }: Props) {
   const isGuru = role === "guru";
   const Icon = isGuru ? GraduationCap : UserRound;
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const result = login(role, email, password);
-    setBusy(false);
+    const result = await login(role, email, password);
     if (result.ok === false) {
+      setBusy(false);
       toast.error(result.error);
       return;
     }
     toast.success(`Selamat datang, ${isGuru ? "Guru" : "Peserta Didik"}!`);
     navigate("/", { replace: true });
-
-
   };
 
   const accent = isGuru
