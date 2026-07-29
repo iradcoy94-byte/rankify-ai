@@ -14,8 +14,8 @@ const TEACHER_NAV = [
 
 const STUDENT_NAV = [
   { to: "/", label: "AI Assistant", end: true },
-  { to: "/peringkat-keseluruhan", label: "Peringkat Saya" },
-  { to: "/analisis", label: "Peningkatan Saya" },
+  { to: "/peringkat-keseluruhan", label: "Peringkat Keseluruhan" },
+  { to: "/analisis", label: "Peningkatan Individu" },
 ];
 
 export function Header() {
