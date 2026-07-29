@@ -28,7 +28,8 @@ interface AuthCtx {
   logout: () => void;
 }
 
-const STORAGE_KEY = "rankify.auth.session.v1";
+const LEGACY_STORAGE_KEY = "rankify.auth.session.v1";
+const SESSION_STORAGE_KEY = "rankify.auth.session.v2";
 
 /** Hardcoded demo accounts. Passwords stored in plaintext because this is a
  *  client-only demo (no backend / no sensitive data). */
@@ -42,7 +43,8 @@ const Ctx = createContext<AuthCtx | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
       return raw ? (JSON.parse(raw) as Session) : null;
     } catch {
       return null;
@@ -50,8 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    if (session) localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-    else localStorage.removeItem(STORAGE_KEY);
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      if (session) sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+      else sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch {
+      // Storage can be unavailable in private or restricted browser contexts.
+    }
   }, [session]);
 
   const login = useCallback<AuthCtx["login"]>((roleOrEmail, emailOrPassword, passwordArg) => {
@@ -73,7 +80,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, []);
 
-  const logout = useCallback(() => setSession(null), []);
+  const logout = useCallback(() => {
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch {
+      // Storage can be unavailable in private or restricted browser contexts.
+    }
+    setSession(null);
+  }, []);
 
   const value = useMemo<AuthCtx>(
     () => ({

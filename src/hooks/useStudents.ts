@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { api } from "@/services/api";
+import { api, getToken } from "@/services/api";
 import { recompute, uid, validateStudent } from "@/lib/ranking";
 import type { Student } from "@/lib/types";
+
+const hasBackendSession = () => Boolean(getToken());
 
 /**
  * useStudents — single source of truth for the student list.
@@ -14,13 +16,13 @@ export function useStudents(initial: Student[] = []) {
   const [students, setStudents] = useState<Student[]>(() => recompute(initial));
   const [isSyncing, setIsSyncing] = useState(false);
   const studentsRef = useRef(students);
-
   useEffect(() => {
     studentsRef.current = students;
   }, [students]);
 
   useEffect(() => {
     if (!user) return;
+    if (!hasBackendSession()) return;
     let active = true;
     setIsSyncing(true);
     api
@@ -48,6 +50,7 @@ export function useStudents(initial: Student[] = []) {
     if (!canManageData) return denyReadonly();
     const recomputed = recompute(next);
     setStudents(recompute(next));
+    if (!hasBackendSession()) return;
     try {
       await api.clearStudents();
       await api.saveStudents(recomputed);
@@ -64,6 +67,7 @@ export function useStudents(initial: Student[] = []) {
     if (!canManageData) return denyReadonly();
     const rows = recompute(incoming);
     setStudents((prev) => recompute([...prev, ...rows]));
+    if (!hasBackendSession()) return;
     try {
       await api.saveStudents(rows);
     } catch (error) {
@@ -87,6 +91,7 @@ export function useStudents(initial: Student[] = []) {
       if (!current) return;
       const updated = validateStudent({ ...current, ...patch });
       setStudents((prev) => recompute(prev.map((s) => (s.id === id ? updated : s))));
+      if (!hasBackendSession()) return;
       try {
         await api.updateStudent(id, updated);
       } catch (error) {
@@ -100,6 +105,7 @@ export function useStudents(initial: Student[] = []) {
   const removeRow = useCallback(async (id: string) => {
     if (!canManageData) return denyReadonly();
     setStudents((prev) => recompute(prev.filter((s) => s.id !== id)));
+    if (!hasBackendSession()) return;
     try {
       await api.deleteStudent(id);
     } catch (error) {
@@ -119,6 +125,7 @@ export function useStudents(initial: Student[] = []) {
       isValid: false,
     };
     setStudents((prev) => recompute([...prev, row]));
+    if (!hasBackendSession()) return;
     try {
       await api.saveStudents([row]);
     } catch (error) {
@@ -130,6 +137,7 @@ export function useStudents(initial: Student[] = []) {
   const clear = useCallback(async () => {
     if (!canManageData) return denyReadonly();
     setStudents([]);
+    if (!hasBackendSession()) return;
     try {
       await api.clearStudents();
     } catch (error) {
