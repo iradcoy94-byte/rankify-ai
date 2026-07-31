@@ -52,7 +52,14 @@ export interface Student {
   error?: string;
 }
 
+export type ChatMessageContent =
+  | string
+  | (
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string } }
+    )[];
+
 export interface ChatMessage {
   role: "user" | "assistant";
-  content: string;
+  content: ChatMessageContent;
 }

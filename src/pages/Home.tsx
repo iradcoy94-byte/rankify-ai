@@ -35,26 +35,25 @@ export default function Home() {
             Ranking siswa otomatis dalam 3 langkah
           </span>
           <h2 className="text-balance text-5xl font-bold leading-[1.05] tracking-tight md:text-6xl">
-            Ranking udah keluar.{" "}
-            <span className="text-gradient-primary">Lo di mana?</span>
+            Ruang kerja Guru untuk{" "}
+            <span className="text-gradient-primary">olah data nilai.</span>
           </h2>
           <p className="mt-5 max-w-xl text-justify text-sm leading-relaxed text-foreground/85 md:text-base">
             <strong className="text-foreground">Rankify.AI</strong> adalah
-            platform berbasis web yang mengubah gambar daftar nilai siswa
-            menjadi peringkat kelas otomatis menggunakan teknologi{" "}
-            <em>OCR</em> dan <em>AI</em>. Dilengkapi edit manual, validasi
-            data, leaderboard interaktif, analisis perkembangan tiap pertemuan,
-            serta AI Assistant untuk membantu refleksi pembelajaran.
+            platform berbasis web untuk membantu guru menginput data nilai,
+            mengubah gambar daftar nilai menjadi tabel digital lewat{" "}
+            <em>OCR</em>, memvalidasi data, lalu melihat hasil peringkat dan
+            perkembangan peserta didik dari pertemuan ke pertemuan.
           </p>
 
           <div className="mt-7 flex flex-wrap gap-3">
             <Button asChild variant="hero" size="lg">
               <Link to="/upload">
-                Mulai Upload <ArrowRight className="h-4 w-4" />
+                Input Data <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link to="/analisis">Lihat Analisis</Link>
+              <Link to="/peringkat-keseluruhan">Lihat Hasil</Link>
             </Button>
           </div>
         </motion.div>
@@ -68,22 +67,22 @@ export default function Home() {
           <FeatureBubble
             icon={<Sparkles className="h-5 w-5" />}
             title="OCR Otomatis"
-            desc="Foto daftar nilai jadi tabel digital dalam hitungan detik."
+            desc="Foto daftar nilai diubah menjadi tabel yang bisa dicek guru."
           />
           <FeatureBubble
             icon={<BarChart3 className="h-5 w-5" />}
-            title="Analisis Mendalam"
-            desc="Pretest vs posttest, gain score, dan grafik per pertemuan."
+            title="Pantau Perkembangan"
+            desc="Pretest, posttest, gain score, dan tren nilai per pertemuan."
           />
           <FeatureBubble
             icon={<Trophy className="h-5 w-5" />}
-            title="Leaderboard Live"
-            desc="Peringkat per kelas dan keseluruhan, update real-time."
+            title="Hasil Peringkat"
+            desc="Peringkat per kelas dan keseluruhan dari data yang tersedia."
           />
           <FeatureBubble
             icon={<GraduationCap className="h-5 w-5" />}
             title="AI Assistant"
-            desc="Tanya AI seputar ranking & matematika, fokus tanpa melenceng."
+            desc="Bantu guru membaca pola capaian dan kebutuhan belajar siswa."
           />
         </motion.div>
       </section>
@@ -160,22 +159,6 @@ export default function Home() {
           dapat memetakan kemampuan tiap siswa, mengevaluasi efektivitas model
           pembelajaran, serta merancang intervensi yang tepat sasaran.
         </p>
-      </section>
-
-      {/* ---------------- CTA ---------------- */}
-      <section className="overflow-hidden rounded-3xl border border-border bg-gradient-card p-8 text-center shadow-card-soft md:p-12">
-        <h3 className="text-3xl font-bold md:text-4xl">
-          Siap melihat peringkat <span className="text-gradient-primary">kelasmu</span>?
-        </h3>
-        <p className="mx-auto mt-3 max-w-xl text-sm text-foreground/80 md:text-base">
-          Upload satu foto papan nilai, biarkan Rankify.AI yang menyusun
-          peringkat, validasi data, dan menyajikan analisisnya.
-        </p>
-        <Button asChild variant="hero" size="lg" className="mt-6">
-          <Link to="/upload">
-            Mulai Sekarang <ArrowRight className="h-4 w-4" />
-          </Link>
-        </Button>
       </section>
     </div>
   );

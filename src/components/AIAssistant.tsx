@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, MessageCircle, Send, Sparkles, X, Loader2, Calculator } from "lucide-react";
+import {
+  Bot,
+  Camera,
+  Calculator,
+  Loader2,
+  MessageCircle,
+  Paperclip,
+  Send,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { streamAssistant } from "@/services/aiService";
@@ -17,6 +28,12 @@ const QUICK_PROMPTS = [
   "Buat contoh soal serupa dan pembahasannya",
   "Cek cara pengerjaan saya",
 ];
+
+interface ImageAttachment {
+  id: string;
+  name: string;
+  dataUrl: string;
+}
 
 export function AIAssistant({ students }: AssistantProps) {
   const [open, setOpen] = useState(false);
@@ -60,6 +77,7 @@ export function AssistantChatSurface({
   fullPage = false,
 }: AssistantProps & { compact?: boolean; fullPage?: boolean }) {
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -71,19 +89,23 @@ export function AssistantChatSurface({
     });
   }, [messages, isLoading]);
 
-  const send = async (text: string) => {
+  const send = async (text: string, images = attachments) => {
     const trimmed = text.trim();
-    if (!trimmed || isLoading) return;
+    if ((!trimmed && images.length === 0) || isLoading) return;
 
     if (!getToken()) {
       toast.error("AI Assistant membutuhkan backend/API aktif agar semua siswa memakai sumber jawaban yang sama.");
       return;
     }
 
-    const userMsg: ChatMessage = { role: "user", content: trimmed };
+    const userMsg: ChatMessage = {
+      role: "user",
+      content: buildUserContent(trimmed, images),
+    };
     const next = [...messages, userMsg];
     setMessages(next);
     setInput("");
+    setAttachments([]);
     setIsLoading(true);
 
     let acc = "";
@@ -146,6 +168,8 @@ export function AssistantChatSurface({
               input={input}
               isLoading={isLoading}
               onInputChange={setInput}
+              attachments={attachments}
+              onAttachmentsChange={setAttachments}
               onSend={send}
             />
           </div>
@@ -178,6 +202,8 @@ export function AssistantChatSurface({
               input={input}
               isLoading={isLoading}
               onInputChange={setInput}
+              attachments={attachments}
+              onAttachmentsChange={setAttachments}
               onSend={send}
             />
           </div>
@@ -193,6 +219,8 @@ function ChatComposer({
   input,
   isLoading,
   onInputChange,
+  attachments,
+  onAttachmentsChange,
   onSend,
 }: {
   compact: boolean;
@@ -200,42 +228,135 @@ function ChatComposer({
   input: string;
   isLoading: boolean;
   onInputChange: (value: string) => void;
-  onSend: (text: string) => void;
+  attachments: ImageAttachment[];
+  onAttachmentsChange: (value: ImageAttachment[]) => void;
+  onSend: (text: string, images?: ImageAttachment[]) => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const canSend = input.trim().length > 0 || attachments.length > 0;
+
+  const addFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const imageFiles = Array.from(files).filter((file) =>
+      file.type.startsWith("image/"),
+    );
+    if (imageFiles.length === 0) {
+      toast.error("Pilih file gambar agar AI bisa membacanya.");
+      return;
+    }
+
+    try {
+      const next = await Promise.all(imageFiles.map(readImageAttachment));
+      onAttachmentsChange([...attachments, ...next].slice(0, 4));
+    } catch {
+      toast.error("Gambar gagal dibaca. Coba pilih gambar lain.");
+    }
+  };
+
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSend(input);
+        onSend(input, attachments);
       }}
-      className="mx-auto flex max-w-4xl items-end gap-2"
+      className="mx-auto max-w-4xl"
     >
-      <textarea
-        value={input}
-        onChange={(e) => onInputChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            onSend(input);
-          }
-        }}
-        placeholder="Tulis soal matematika atau bagian yang belum dipahami..."
-        rows={compact ? 1 : 2}
-        className={`${fullPage ? "rounded-3xl bg-card/80 px-5 py-3 shadow-card-soft" : "rounded-xl bg-background px-3 py-2.5"} max-h-36 min-h-11 flex-1 resize-none border border-border text-sm outline-none transition-smooth focus:border-primary`}
-      />
-      <Button
-        type="submit"
-        size="icon"
-        variant="hero"
-        className={fullPage ? "h-11 w-11 rounded-full" : ""}
-        disabled={isLoading || !input.trim()}
-      >
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Send className="h-4 w-4" />
-        )}
-      </Button>
+      {attachments.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {attachments.map((image) => (
+            <div
+              key={image.id}
+              className="group relative h-16 w-16 overflow-hidden rounded-xl border border-border bg-card"
+            >
+              <img src={image.dataUrl} alt={image.name} className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() =>
+                  onAttachmentsChange(attachments.filter((item) => item.id !== image.id))
+                }
+                className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-background/85 text-foreground opacity-0 transition-smooth group-hover:opacity-100"
+                aria-label={`Hapus ${image.name}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-end gap-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void addFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            void addFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className={fullPage ? "h-11 w-11 rounded-full" : ""}
+          disabled={isLoading}
+          onClick={() => fileInputRef.current?.click()}
+          aria-label="Upload gambar"
+        >
+          <Paperclip className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className={fullPage ? "h-11 w-11 rounded-full" : ""}
+          disabled={isLoading}
+          onClick={() => cameraInputRef.current?.click()}
+          aria-label="Ambil gambar"
+        >
+          <Camera className="h-4 w-4" />
+        </Button>
+        <textarea
+          value={input}
+          onChange={(e) => onInputChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSend(input, attachments);
+            }
+          }}
+          placeholder="Tulis soal matematika, atau lampirkan foto soal..."
+          rows={compact ? 1 : 2}
+          className={`${fullPage ? "rounded-3xl bg-card/80 px-5 py-3 shadow-card-soft" : "rounded-xl bg-background px-3 py-2.5"} max-h-36 min-h-11 flex-1 resize-none border border-border text-sm outline-none transition-smooth focus:border-primary`}
+        />
+        <Button
+          type="submit"
+          size="icon"
+          variant="hero"
+          className={fullPage ? "h-11 w-11 rounded-full" : ""}
+          disabled={isLoading || !canSend}
+          aria-label="Kirim"
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -290,11 +411,13 @@ function Bubble({
   compact,
 }: {
   role: "user" | "assistant";
-  content: string;
+  content: ChatMessage["content"];
   loading?: boolean;
   compact: boolean;
 }) {
   const isUser = role === "user";
+  const text = getMessageText(content);
+  const images = getMessageImages(content);
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -315,11 +438,70 @@ function Bubble({
             <Dot delay={0.3} />
           </span>
         ) : (
-          <span className="whitespace-pre-wrap">{content}</span>
+          <div className="space-y-2">
+            {images.length > 0 && (
+              <div className="grid gap-2">
+                {images.map((src) => (
+                  <img
+                    key={src}
+                    src={src}
+                    alt="Lampiran gambar"
+                    className="max-h-56 rounded-xl border border-border/60 object-contain"
+                  />
+                ))}
+              </div>
+            )}
+            {text && <span className="block whitespace-pre-wrap">{text}</span>}
+          </div>
         )}
       </div>
     </motion.div>
   );
+}
+
+function buildUserContent(text: string, images: ImageAttachment[]): ChatMessage["content"] {
+  if (images.length === 0) return text;
+  return [
+    ...(text ? [{ type: "text" as const, text }] : []),
+    ...images.map((image) => ({
+      type: "image_url" as const,
+      image_url: { url: image.dataUrl },
+    })),
+  ];
+}
+
+function getMessageText(content: ChatMessage["content"]) {
+  if (typeof content === "string") return content;
+  return content
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n");
+}
+
+function getMessageImages(content: ChatMessage["content"]) {
+  if (typeof content === "string") return [];
+  return content
+    .filter((part) => part.type === "image_url")
+    .map((part) => part.image_url.url);
+}
+
+function readImageAttachment(file: File): Promise<ImageAttachment> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("Invalid image"));
+        return;
+      }
+      resolve({
+        id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`,
+        name: file.name,
+        dataUrl: reader.result,
+      });
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 function Dot({ delay }: { delay: number }) {

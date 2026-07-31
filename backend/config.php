@@ -12,10 +12,12 @@ $config = [
         'user' => getenv('RANKIFY_DB_USER') ?: 'root',
         'pass' => getenv('RANKIFY_DB_PASS') ?: '',
     ],
-    'deepseek' => [
-        'api_key' => getenv('DEEPSEEK_API_KEY') ?: '',
-        'base_url' => getenv('DEEPSEEK_BASE_URL') ?: 'https://api.deepseek.com/chat/completions',
-        'model' => getenv('DEEPSEEK_MODEL') ?: 'deepseek-chat',
+    'openrouter' => [
+        'api_key' => getenv('OPENROUTER_API_KEY') ?: getenv('DEEPSEEK_API_KEY') ?: '',
+        'base_url' => getenv('OPENROUTER_BASE_URL') ?: 'https://openrouter.ai/api/v1/chat/completions',
+        'model' => getenv('OPENROUTER_MODEL') ?: 'openai/gpt-4o',
+        'referer' => getenv('OPENROUTER_HTTP_REFERER') ?: 'http://localhost:8080',
+        'title' => getenv('OPENROUTER_X_TITLE') ?: 'Rankify.AI',
     ],
 ];
 

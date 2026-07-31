@@ -264,17 +264,18 @@ try {
     if ($segments === ['chat'] && $method === 'POST') {
         $user = current_user($config);
         $body = read_json();
-        $apiKey = $config['deepseek']['api_key'];
+        $aiConfig = $config['openrouter'];
+        $apiKey = $aiConfig['api_key'];
 
         if (!$apiKey) {
-            json_response(['error' => 'DEEPSEEK_API_KEY belum diatur di environment XAMPP.'], 500);
+            json_response(['error' => 'OPENROUTER_API_KEY belum diatur di environment XAMPP atau backend/config.local.php.'], 500);
         }
 
         $students = $body['students'] ?? [];
         $messages = $body['messages'] ?? [];
         $system = [
             'role' => 'system',
-            'content' => 'Anda adalah AI Assistant Rankify.AI untuk konteks pendidikan. Jawab dalam Bahasa Indonesia, ringkas, membantu peserta didik memahami materi dan membantu guru membaca data nilai. Gunakan data siswa yang diberikan hanya sebagai konteks, jangan mengarang data.',
+            'content' => 'Anda adalah AI Assistant Rankify.AI untuk konteks pendidikan. Jawab dalam Bahasa Indonesia, ringkas, membantu peserta didik memahami materi, membaca gambar soal jika dilampirkan, dan membantu guru membaca data nilai. Gunakan data siswa yang diberikan hanya sebagai konteks, jangan mengarang data.',
         ];
         $context = [
             'role' => 'system',
@@ -282,7 +283,7 @@ try {
         ];
 
         $payload = [
-            'model' => $config['deepseek']['model'],
+            'model' => $aiConfig['model'],
             'stream' => true,
             'messages' => array_merge([$system, $context], $messages),
         ];
@@ -291,12 +292,14 @@ try {
         header('Cache-Control: no-cache');
         header('X-Accel-Buffering: no');
 
-        $ch = curl_init($config['deepseek']['base_url']);
+        $ch = curl_init($aiConfig['base_url']);
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/json',
                 'Authorization: Bearer ' . $apiKey,
+                'HTTP-Referer: ' . $aiConfig['referer'],
+                'X-Title: ' . $aiConfig['title'],
             ],
             CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
             CURLOPT_WRITEFUNCTION => static function ($curl, string $chunk): int {

@@ -11,9 +11,11 @@ return [
         'user' => 'root',
         'pass' => '',
     ],
-    'deepseek' => [
-        'api_key' => 'ISI_API_KEY_DEEPSEEK_DI_SINI',
-        'base_url' => 'https://api.deepseek.com/chat/completions',
-        'model' => 'deepseek-chat',
+    'openrouter' => [
+        'api_key' => 'ISI_API_KEY_OPENROUTER_DI_SINI',
+        'base_url' => 'https://openrouter.ai/api/v1/chat/completions',
+        'model' => 'openai/gpt-4o',
+        'referer' => 'http://localhost:8080',
+        'title' => 'Rankify.AI',
     ],
 ];
