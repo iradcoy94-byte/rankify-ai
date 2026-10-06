@@ -7,7 +7,8 @@ tests and static backend audit in the base commit
 `a0aaf858e72759345bfdd37176ec921890db9672` ("Fix frontend streaming, import
 validation and confirmed student synchronization") were **implemented by root
 Codex** before this session began, after two earlier full-prompt attempts that
-exhausted their resumes without producing source edits. They are **not** evidence
+exhausted their resumes before completing the implementation or any soak batch.
+The first produced a partial ranking edit; the second produced only a checkpoint. They are **not** evidence
 of native whole-task OpenCode success. See `docs/IMPLEMENTATION_PROVENANCE.md`.
 
 This session independently re-verified the prepared implementation and then
@@ -34,22 +35,22 @@ this session. The implementation under test is the prepared commit as delivered.
 
 The base commit touched 22 files (+717 / −209). Frontend behaviour under test:
 
-- **SSE streaming** (`src/services/aiService.ts`, +76 tests): terminal/EOF and
+- **SSE streaming** (`src/services/aiService.ts`, 8 regression tests): terminal/EOF and
   malformed or split frames are handled instead of hanging or crashing.
-- **Ranking / validation** (`src/lib/ranking.ts`, +38 tests): finite numeric
+- **Ranking / validation** (`src/lib/ranking.ts`, 11 regression tests): finite numeric
   validation and dense ranking; randomized cases driven by
   `process.env.RANKIFY_TEST_SEED`.
-- **OCR parsing** (`src/lib/parser.ts`, +18 tests): names and decimal commas.
+- **OCR parsing** (`src/lib/parser.ts`, 3 regression tests): names and decimal commas.
 - **Excel grouping / import** (`src/services/excelService.ts`,
-  `src/components/ExcelUploader.tsx`, +25 tests): group boundaries.
+  `src/components/ExcelUploader.tsx`, 3 parsing regression tests): group boundaries.
 - **Student state and failed synchronization** (`src/hooks/useStudents.ts`,
-  +113 tests): queued optimistic mutations with confirmed cache writes and
+  8 synchronization regression tests): queued optimistic mutations with confirmed cache writes and
   rollback on failure.
-- **API error handling** (`src/services/api.ts`, +49 tests): error and empty
+- **API error handling** (`src/services/api.ts`, 5 regression tests): error and empty
   responses.
 - **Upload confirmation and accessible row inputs**
   (`src/pages/Upload.tsx`, `src/components/Uploader.tsx`,
-  `src/components/RankingTable.tsx`, +34 tests).
+  `src/components/RankingTable.tsx`, 3 upload regression tests).
 - **Static PHP/SQL** (`backend/index.php`): route-ID precedence over the body ID
   and transaction-wrapped bulk replacement. **Not executed** — see limitations.
 
@@ -110,7 +111,7 @@ Aggregate from the 20 receipts (all `passed: true`, no failures, no retries):
 - **42 tests and 24 browser assertions, every iteration**
 - identical tree fingerprint across all 20 receipts:
   `8aa4b19c29b58e7b5bef4a1651553483d42163c6a97f90f87f821d718e864f2d`
-- seeds spanned `index * 100000 + iteration`, i.e. 100000–200005
+- seeds spanned `index * 100000 + iteration`, i.e. 100000–2000005
 
 Per-batch seconds: 321.4, 318.7, 319.8, 319.2, 323.9, 324.6, 323.9, 321.9, 321.1,
 328.7, 341.8, 341.3, 359.7, 333.3, 321.9, 320.6, 366.6, 351.6, 326.1, 328.8.
@@ -151,8 +152,10 @@ establish server-side data isolation.
 
 - This is a prepared-artifact run; the implementation credit belongs to root
   Codex's preparation commit, as disclosed above.
-- No backend, database, migration, Docker, SSH, infrastructure or real
-  AI-provider request was executed. All backend/SQL statements remain untested.
+- No Rankify backend, database, migration, Docker, SSH or infrastructure
+  operation was executed in this experiment. Frontend tests made no real
+  Rankify AI-provider requests. OpenCode used the configured LLM router to
+  run the experiment. All backend/SQL runtime statements remain untested.
 - Frontend coverage is mock-only; `VITE_API_BASE_URL` points at an unusable local
   mock endpoint and browser probes intercept all requests. No real authorization,
   persistence or concurrency is proven.
@@ -173,3 +176,10 @@ establish server-side data isolation.
   (no pre-existing PR existed, so none was duplicated), with this report's
   validation summary and limitations in its body.
 - Checkpoint: `/home/mal/.local/state/opencode-long-task/rankify-prepared-20261006-0910/checkpoint.json`.
+
+Root review corrected test counts versus added-line counts, the seed upper
+bound, and the two failed attempts’ provenance after the worker stopped.
+These are documentation-only corrections; the frozen source fingerprint and
+all twenty existing receipts are unchanged. Independent final verification
+and the single helper review passed at commit cd4a2c0; the final documentation
+commit and matching draft-PR head are verified separately by root.
