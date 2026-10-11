@@ -20,9 +20,9 @@ import type { Student } from "./types";
  * confuse the parser ("Hadi 88 tuntas" → Hadi, 88).
  */
 
-const SEPARATOR = /[\s:=|\-–—\t]+/;
+const SEPARATOR = /[\s:=|\-–—\t]+/g;
 // Strip leading list numbering like "1.", "2)", "3 -"
-const LEADING_NUM = /^\s*\d{1,3}\s*[.)]\s*/;
+const LEADING_NUM = /^\s*\d{1,3}\s*(?:[.)]|-\s)\s*/;
 
 // Roman numerals commonly used for SMP/SMA classes
 const ROMAN = "(?:VII|VIII|IX|X|XI|XII)";
@@ -87,7 +87,9 @@ export function parseOcrText(raw: string, defaultClass?: string): Student[] {
   let activeClass: string | undefined = defaultClass?.toUpperCase();
 
   for (const original of lines) {
-    const line = original.replace(LEADING_NUM, "");
+    // Strip leading list numbering from the RAW line so class tokens such as
+    // "X-IPA-2" keep their dashes for detectClassLabel().
+    const line = original.replace(LEADING_NUM, "").trim();
 
     // 1) Pure class header line — update context, skip producing a student.
     //    Examples: "Kelas: XII IPA 1", "XII IPA 1", "X-IPA-2"
@@ -105,7 +107,8 @@ export function parseOcrText(raw: string, defaultClass?: string): Student[] {
     const scoreStr = lastMatch[0].replace(",", ".");
     const score = Number(scoreStr);
 
-    // Everything before the score = candidate name.
+    // Everything before the score = candidate name. Normalise the separator
+    // characters (":", "-", "=", "|", tabs) to single spaces.
     const nameRaw = line.slice(0, lastMatch.index ?? 0);
     let name = nameRaw.replace(SEPARATOR, " ").trim().replace(/\s+/g, " ");
     if (!name) continue;
