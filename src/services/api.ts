@@ -61,7 +61,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 }
 
-function fromApiStudent(row: Student): Student {
+export function fromApiStudent(row: Student): Student {
   return {
     ...row,
     score:
