@@ -20,7 +20,7 @@ import type { Student } from "./types";
  * confuse the parser ("Hadi 88 tuntas" → Hadi, 88).
  */
 
-const SEPARATOR = /[\s:=|\-–—\t]+/;
+const TRAILING_SEPARATOR = /[\s:=|\-–—\t]+$/;
 // Strip leading list numbering like "1.", "2)", "3 -"
 const LEADING_NUM = /^\s*\d{1,3}\s*[.)]\s*/;
 
@@ -107,7 +107,7 @@ export function parseOcrText(raw: string, defaultClass?: string): Student[] {
 
     // Everything before the score = candidate name.
     const nameRaw = line.slice(0, lastMatch.index ?? 0);
-    let name = nameRaw.replace(SEPARATOR, " ").trim().replace(/\s+/g, " ");
+    let name = nameRaw.replace(TRAILING_SEPARATOR, "").trim().replace(/\s+/g, " ");
     if (!name) continue;
 
     // 3) If the name STARTS with something that looks like a class token,

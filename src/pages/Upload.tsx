@@ -81,7 +81,7 @@ export default function Upload() {
   };
 
   /* ── OCR handler ── */
-  const handleOcrExtracted = (text: string) => {
+  const handleOcrExtracted = async (text: string) => {
     const meta = resolveClassMeta();
     const parsed = parseOcrText(text, meta.className);
     if (parsed.length === 0) {
@@ -91,7 +91,7 @@ export default function Upload() {
     const finalRows = parsed
       .map((s) => ({ ...s, className: meta.className ?? s.className, model: meta.model ?? s.model }))
       .map(applyCategory);
-    appendStudents(finalRows);
+    if (!await appendStudents(finalRows)) return;
     toast.success(
       `${finalRows.length} siswa ditambahkan (${CATEGORY_OPTIONS.find((c) => c.value === category)?.label}) via OCR`,
     );
@@ -99,9 +99,9 @@ export default function Upload() {
   };
 
   /* ── Excel handler (semua metadata sudah otomatis dari file) ── */
-  const handleExcelParsed = (students: Student[]) => {
+  const handleExcelParsed = async (students: Student[]) => {
     if (students.length === 0) return;
-    appendStudents(students);
+    if (!await appendStudents(students)) return;
     toast.success(`${students.length} records diimport dari Excel`);
     navigate("/peringkat-keseluruhan");
   };

@@ -30,7 +30,7 @@ import type { Student } from "@/lib/types";
 
 interface ExcelUploaderProps {
   /** Called with parsed students when user clicks "Import". */
-  onStudentsParsed: (students: Student[]) => void;
+  onStudentsParsed: (students: Student[]) => void | Promise<void>;
 }
 
 const ACCEPTED_TYPES = {
@@ -47,6 +47,7 @@ export function ExcelUploader({ onStudentsParsed }: ExcelUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ExcelParseResult | null>(null);
   const [isParsing, setIsParsing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const processFile = useCallback(async (f: File) => {
     setFile(f);
@@ -77,15 +78,22 @@ export function ExcelUploader({ onStudentsParsed }: ExcelUploaderProps) {
       onDrop: handleDrop,
       accept: ACCEPTED_TYPES,
       multiple: false,
-      disabled: isParsing,
+      disabled: isParsing || isImporting,
       noClick: false,
     });
 
   const handleClear = () => { setFile(null); setResult(null); };
 
-  const handleConfirm = () => {
-    if (!result || result.students.length === 0) return;
-    onStudentsParsed(result.students);
+  const handleConfirm = async () => {
+    if (!result || result.students.length === 0 || isImporting) return;
+    setIsImporting(true);
+    try {
+      await onStudentsParsed(result.students);
+    } catch {
+      toast.error("Gagal menyimpan data. Silakan coba lagi.");
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   // Derived display data
@@ -205,7 +213,7 @@ export function ExcelUploader({ onStudentsParsed }: ExcelUploaderProps) {
                   ({(file.size / 1024).toFixed(0)} KB)
                 </span>
               </div>
-              {!isParsing && (
+              {!isParsing && !isImporting && (
                 <button
                   onClick={handleClear}
                   className="ml-2 rounded-full p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-smooth shrink-0"
@@ -340,18 +348,18 @@ export function ExcelUploader({ onStudentsParsed }: ExcelUploaderProps) {
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleClear} disabled={isParsing}>
+                  <Button variant="outline" size="sm" onClick={handleClear} disabled={isParsing || isImporting}>
                     Ganti File
                   </Button>
                   <Button
                     variant="hero"
                     size="sm"
                     onClick={handleConfirm}
-                    disabled={result.students.length === 0}
+                    disabled={result.students.length === 0 || isImporting}
                     className="flex-1"
                   >
                     <CheckCircle2 className="h-4 w-4" />
-                    Import {result.students.length} Records
+                    {isImporting ? "Menyimpan…" : `Import ${result.students.length} Records`}
                   </Button>
                 </div>
               </>

@@ -20,7 +20,7 @@ interface UploaderProps {
    * The host page is expected to APPEND (not replace) the parsed rows so
    * users can build up data from multiple photos.
    */
-  onTextExtracted: (text: string) => void;
+  onTextExtracted: (text: string) => void | Promise<void>;
 }
 
 /**
@@ -68,7 +68,7 @@ export function Uploader({ onTextExtracted }: UploaderProps) {
     try {
       const text = await runOcr(file, setProgress);
       toast.success("OCR selesai — data ditambahkan ke tabel");
-      onTextExtracted(text);
+      await onTextExtracted(text);
       // Reset preview so user can immediately add another photo.
       handleClear();
     } catch (err) {
