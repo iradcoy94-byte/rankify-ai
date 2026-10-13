@@ -7,130 +7,163 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, clearToken, setToken } from "@/services/api";
+import type { Session as SupabaseSession } from "@supabase/supabase-js";
+import { assertSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 
-export type Role = "guru" | "siswa";
+export type Role = "admin" | "guru" | "siswa";
 
-interface Session {
+export interface UserProfile {
+  id: string;
+  schoolId: string;
   role: Role;
   email: string;
   name: string;
+  nisn?: string;
+  mustChangePassword: boolean;
 }
 
 interface AuthCtx {
-  session: Session | null;
-  user: Session | null;
+  session: UserProfile | null;
+  user: UserProfile | null;
+  loading: boolean;
   isReadOnly: boolean;
   canManageData: boolean;
-  login: {
-    (role: Role, email: string, password: string): Promise<{ ok: true } | { ok: false; error: string }>;
-    (email: string, password: string): Promise<{ ok: true } | { ok: false; error: string }>;
-  };
-  logout: () => void;
+  mustChangePassword: boolean;
+  login: (role: Role, email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  logout: () => Promise<void>;
+  changePassword: (password: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
-
-const LEGACY_STORAGE_KEY = "rankify.auth.session.v1";
-const SESSION_STORAGE_KEY = "rankify.auth.session.v2";
-
-/** Hardcoded demo accounts. Passwords stored in plaintext because this is a
- *  client-only demo (no backend / no sensitive data). */
-const CREDENTIALS: Record<Role, { email: string; password: string; name: string }> = {
-  guru: { email: "guru@rankify.test", password: "rankify123", name: "Guru Rankify" },
-  siswa: { email: "siswa@rankify.test", password: "rankify123", name: "Siswa Rankify" },
-};
-
-const apiRoleToAppRole = (role: string): Role =>
-  role === "peserta_didik" ? "siswa" : "guru";
 
 const Ctx = createContext<AuthCtx | null>(null);
 
+async function loadProfile(userId: string): Promise<UserProfile> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, school_id, role, email, full_name, nisn, must_change_password, is_active")
+    .eq("id", userId)
+    .single();
+  if (error || !data) {
+    throw new Error("Profil akun belum tersedia. Minta administrator memeriksa provisioning akun Supabase.");
+  }
+  if (!data.is_active) throw new Error("Akun ini dinonaktifkan. Hubungi administrator sekolah.");
+  return {
+    id: data.id,
+    schoolId: data.school_id,
+    role: data.role as Role,
+    email: data.email,
+    name: data.full_name,
+    nisn: data.nisn ?? undefined,
+    mustChangePassword: Boolean(data.must_change_password),
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(() => {
-    try {
-      localStorage.removeItem(LEGACY_STORAGE_KEY);
-      const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as Session) : null;
-    } catch {
-      return null;
+  const [session, setSession] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const acceptAuthSession = useCallback(async (authSession: SupabaseSession | null) => {
+    if (!authSession) {
+      setSession(null);
+      return;
     }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.removeItem(LEGACY_STORAGE_KEY);
-      if (session) sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-      else sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    } catch {
-      // Storage can be unavailable in private or restricted browser contexts.
-    }
-  }, [session]);
-
-  const login = useCallback<AuthCtx["login"]>(async (roleOrEmail: string, emailOrPassword: string, passwordArg?: string): Promise<{ ok: true } | { ok: false; error: string }> => {
-    const role =
-      passwordArg === undefined
-        ? roleOrEmail.trim().toLowerCase() === CREDENTIALS.siswa.email
-          ? "siswa"
-          : "guru"
-        : roleOrEmail as Role;
-    const email = passwordArg === undefined ? roleOrEmail : emailOrPassword;
-    const password = passwordArg === undefined ? emailOrPassword : passwordArg;
-
-    const c = CREDENTIALS[role];
-    if (!c) return { ok: false, error: "Peran tidak dikenal." };
-    if (email.trim().toLowerCase() !== c.email || password !== c.password) {
-      return { ok: false, error: "Email atau kata sandi salah." };
-    }
-
-    try {
-      const result = await api.login(c.email, password);
-      setToken(result.token);
-      setSession({
-        role: apiRoleToAppRole(result.user.role),
-        email: result.user.email,
-        name: result.user.name,
-      });
-      return { ok: true };
-    } catch {
-      clearToken();
-      setSession({ role, email: c.email, name: c.name });
-    }
-
-    return { ok: true };
+    const profile = await loadProfile(authSession.user.id);
+    setSession(profile);
   }, []);
 
-  const logout = useCallback(() => {
-    void api.logout().catch(() => {
-      // Local logout should still work even when the backend is offline.
-    });
-    clearToken();
+  useEffect(() => {
+    let active = true;
     try {
-      localStorage.removeItem(LEGACY_STORAGE_KEY);
-      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      assertSupabaseConfigured();
     } catch {
-      // Storage can be unavailable in private or restricted browser contexts.
+      setLoading(false);
+      return () => { active = false; };
     }
+    void supabase.auth.getSession().then(async ({ data, error }) => {
+      if (!active) return;
+      if (error) {
+        setSession(null);
+      } else {
+        try {
+          await acceptAuthSession(data.session);
+        } catch {
+          await supabase.auth.signOut();
+          setSession(null);
+        }
+      }
+      if (active) setLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, authSession) => {
+      queueMicrotask(() => {
+        void acceptAuthSession(authSession).catch(() => setSession(null));
+      });
+    });
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [acceptAuthSession]);
+
+  const login = useCallback<AuthCtx["login"]>(async (role, email, password) => {
+    try {
+      assertSupabaseConfigured();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (error || !data.user) return { ok: false, error: error?.message ?? "Login gagal." };
+      const profile = await loadProfile(data.user.id);
+      if (profile.role !== role) {
+        await supabase.auth.signOut();
+        return { ok: false, error: `Akun ini terdaftar sebagai ${profile.role}, bukan ${role}.` };
+      }
+      setSession(profile);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Tidak dapat masuk." };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setSession(null);
   }, []);
 
-  const value = useMemo<AuthCtx>(
-    () => ({
-      session,
-      user: session,
-      isReadOnly: session?.role === "siswa",
-      canManageData: session?.role === "guru",
-      login,
-      logout,
-    }),
-    [session, login, logout]
-  );
+  const changePassword = useCallback(async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ must_change_password: false })
+      .eq("id", session?.id ?? "");
+    if (profileError) throw profileError;
+    if (session) setSession({ ...session, mustChangePassword: false });
+  }, [session]);
+
+  const refreshProfile = useCallback(async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data.user) setSession(await loadProfile(data.user.id));
+  }, []);
+
+  const value = useMemo<AuthCtx>(() => ({
+    session,
+    user: session,
+    loading,
+    isReadOnly: session?.role === "siswa",
+    canManageData: session?.role === "guru" || session?.role === "admin",
+    mustChangePassword: session?.mustChangePassword ?? false,
+    login,
+    logout,
+    changePassword,
+    refreshProfile,
+  }), [session, loading, login, logout, changePassword, refreshProfile]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useAuth() {
-  const v = useContext(Ctx);
-  if (!v) throw new Error("useAuth must be used within AuthProvider");
-  return v;
+  const value = useContext(Ctx);
+  if (!value) throw new Error("useAuth must be used within AuthProvider");
+  return value;
 }
-
-export const DEMO_CREDENTIALS = CREDENTIALS;

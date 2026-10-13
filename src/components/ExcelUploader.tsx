@@ -188,9 +188,8 @@ export function ExcelUploader({ onStudentsParsed }: ExcelUploaderProps) {
                 <div className="flex items-start gap-2">
                   <BookOpen className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                   <span>
-                    <strong className="text-foreground">Kolom Nama & Nilai</strong>{" "}
-                    bisa berulang secara horizontal — satu siswa, banyak penilaian
-                    dalam satu baris.
+                    <strong className="text-foreground">Kolom NISN, Nama & Nilai</strong>{" "}
+                    bisa berulang secara horizontal. NISN membantu pencocokan; jika tidak tersedia, sistem mencocokkan nama dan kelas.
                   </span>
                 </div>
               </div>
@@ -300,6 +299,7 @@ export function ExcelUploader({ onStudentsParsed }: ExcelUploaderProps) {
                       <table className="w-full text-xs">
                         <thead className="bg-secondary/20 sticky top-0">
                           <tr>
+                            <th className="px-3 py-2 text-left font-medium text-muted-foreground">NISN</th>
                             <th className="px-3 py-2 text-left font-medium text-muted-foreground">Nama</th>
                             <th className="px-3 py-2 text-left font-medium text-muted-foreground">Kelas / Sheet</th>
                             <th className="px-3 py-2 text-left font-medium text-muted-foreground">Jenis</th>
@@ -317,6 +317,7 @@ export function ExcelUploader({ onStudentsParsed }: ExcelUploaderProps) {
                                   : `Pertemuan ${s.meeting ?? "?"}`;
                             return (
                               <tr key={s.id} className="border-t border-border/50 hover:bg-secondary/20">
+                                <td className="px-3 py-1.5 font-mono text-muted-foreground">{s.nisn ?? "—"}</td>
                                 <td className="px-3 py-1.5 font-medium">{s.name}</td>
                                 <td className="px-3 py-1.5 text-muted-foreground">{s.className ?? "—"}</td>
                                 <td className="px-3 py-1.5">

@@ -10,6 +10,8 @@ const TEACHER_NAV = [
   { to: "/peringkat-keseluruhan", label: "Hasil Keseluruhan" },
   { to: "/peringkat-kelas", label: "Hasil per Kelas" },
   { to: "/analisis", label: "Analisis Peningkatan" },
+  { to: "/materi", label: "Materi Tutor" },
+  { to: "/pengaturan", label: "Pengaturan" },
 ];
 
 const STUDENT_NAV = [
@@ -17,11 +19,12 @@ const STUDENT_NAV = [
   { to: "/peringkat-keseluruhan", label: "Peringkat Keseluruhan" },
   { to: "/analisis", label: "Peningkatan Individu" },
 ];
+const ADMIN_NAV = [...TEACHER_NAV, { to: "/administrasi", label: "Administrasi" }];
 
 export function Header() {
   const { session, logout } = useAuth();
-  const isGuru = session?.role === "guru";
-  const navItems = isGuru ? TEACHER_NAV : STUDENT_NAV;
+  const isGuru = session?.role === "guru" || session?.role === "admin";
+  const navItems = session?.role === "admin" ? ADMIN_NAV : isGuru ? TEACHER_NAV : STUDENT_NAV;
   const RoleIcon = isGuru ? GraduationCap : UserRound;
 
   return (

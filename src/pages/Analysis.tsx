@@ -39,9 +39,9 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useStudentsCtx } from "@/context/StudentsContext";
-import type { ChatMessage, Student } from "@/lib/types";
+import type { Student } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { streamAssistant } from "@/services/aiService";
+import { calculateNGain as getNGain } from "@/lib/ranking";
 
 const KKM = 68;
 
@@ -82,10 +82,11 @@ interface PrePostPoint {
 }
 
 export default function Analysis() {
-  const { students } = useStudentsCtx();
+  const { students, classKkm, activeMetrics } = useStudentsCtx();
   const profiles = useMemo(() => buildProfiles(students), [students]);
   const [selectedKey, setSelectedKey] = useState<string>("");
   const selected = profiles.find((p) => p.key === selectedKey) ?? null;
+  const selectedKkm = selected ? classKkm[selected.className] ?? KKM : KKM;
 
   useEffect(() => {
     if (selectedKey && profiles.length > 0 && !profiles.some((p) => p.key === selectedKey)) {
@@ -133,23 +134,23 @@ export default function Analysis() {
         <EmptyState message="Pilih siswa untuk melihat analisis peningkatan." />
       ) : (
         <>
-          <SelectedStudentCard student={selected} />
-          <SummaryCards student={selected} />
+          <SelectedStudentCard student={selected} kkm={selectedKkm} />
+          <SummaryCards student={selected} kkm={selectedKkm} metrics={activeMetrics} />
 
           <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
             <Block
               title="Grafik Perkembangan Per Pertemuan"
               subtitle="Lihat bagaimana nilai anak Anda berubah dari waktu ke waktu, dibandingkan rata-rata teman sekelas (garis putus-putus)."
             >
-              <IndividualProgressChart data={progressData} />
+              <IndividualProgressChart data={progressData} kkm={selectedKkm} />
             </Block>
 
-            <Block
+            {activeMetrics.prepost && <Block
               title="Perbandingan Nilai Sebelum dan Sesudah Belajar"
               subtitle="Perbandingan nilai sebelum dan sesudah belajar."
             >
-              <PrePostBarChart data={prePostData} />
-            </Block>
+              <PrePostBarChart data={prePostData} kkm={selectedKkm} />
+            </Block>}
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1.05fr_1fr]">
@@ -157,7 +158,7 @@ export default function Analysis() {
               title="Insight dan Rekomendasi Personal"
               subtitle="Ringkasan otomatis berdasarkan data siswa terpilih."
             >
-              <PersonalInsight student={selected} rankHistory={rankHistory} />
+              <PersonalInsight student={selected} rankHistory={rankHistory} kkm={selectedKkm} metrics={activeMetrics} />
             </Block>
 
             <Block
@@ -250,7 +251,7 @@ function StudentSelector({
   );
 }
 
-function SelectedStudentCard({ student }: { student: StudentProfile }) {
+function SelectedStudentCard({ student, kkm }: { student: StudentProfile; kkm: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -277,7 +278,7 @@ function SelectedStudentCard({ student }: { student: StudentProfile }) {
             {student.meetingScores.length} pertemuan
           </Badge>
           <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2.5 py-0.5 font-semibold text-accent">
-            Standar nilai {KKM}
+            Standar nilai {kkm}
             <InfoTooltip label="standar nilai minimum" className="h-5 w-5">
               Standar nilai minimum adalah batas nilai yang digunakan sekolah
               untuk melihat apakah siswa sudah mencapai target belajar.
@@ -289,50 +290,28 @@ function SelectedStudentCard({ student }: { student: StudentProfile }) {
   );
 }
 
-function SummaryCards({ student }: { student: StudentProfile }) {
+function SummaryCards({ student, kkm, metrics }: { student: StudentProfile; kkm: number; metrics: Record<string, boolean> }) {
   const nGain = getNGain(student.pretest, student.posttest);
   const gainCategory = getNGainCategory(nGain);
   const gainExplanation = getNGainExplanation(nGain);
-  const pass = typeof student.currentScore === "number" && student.currentScore >= KKM;
+  const pass = typeof student.currentScore === "number" && student.currentScore >= kkm;
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      <KpiCard
+      {metrics.prepost && <KpiCard
         icon={<Target className="h-4 w-4" />}
-        label={
-          <span className="inline-flex items-center gap-1">
-            Nilai Sebelum & Sesudah Belajar
-            <InfoTooltip label="nilai sebelum dan sesudah belajar">
-              Nilai sebelum belajar diambil dari pretest. Nilai sesudah belajar
-              diambil dari posttest. Perbandingan ini membantu melihat perubahan
-              hasil belajar setelah pembelajaran.
-            </InfoTooltip>
-          </span>
-        }
+        label="Nilai Sebelum & Sesudah Belajar"
         value={`${formatScore(student.pretest)} -> ${formatScore(student.posttest)}`}
         detail="Nilai awal dibandingkan nilai akhir"
         tone="primary"
-      />
-      <KpiCard
+      />}
+      {metrics.nGain && <KpiCard
         icon={<TrendingUp className="h-4 w-4" />}
-        label={
-          <span className="inline-flex items-center gap-1">
-            Seberapa Besar Peningkatannya
-            <InfoTooltip label="N-Gain">
-              N-Gain adalah angka yang menunjukkan seberapa besar kemajuan
-              belajar siswa dari sebelum ke sesudah pembelajaran, dengan
-              memperhitungkan seberapa besar ruang peningkatan yang mungkin
-              dicapai. Semakin mendekati 1, semakin bagus peningkatannya.
-              Tinggi (0.7 ke atas) berarti peningkatan sangat baik 🎉. Sedang
-              (0.3 sampai 0.7) berarti peningkatan cukup baik 👍. Rendah (di
-              bawah 0.3) berarti peningkatan masih perlu didorong lagi 💪.
-            </InfoTooltip>
-          </span>
-        }
+        label="N-Gain"
         value={nGain === undefined ? "-" : nGain.toFixed(2)}
         detail={`${gainCategory}: ${gainExplanation}`}
         tone={gainCategory === "Tinggi" ? "success" : gainCategory === "Rendah" ? "warning" : "primary"}
-      />
+      />}
       <KpiCard
         icon={pass ? <Check className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
         label={
@@ -341,15 +320,15 @@ function SummaryCards({ student }: { student: StudentProfile }) {
             <InfoTooltip label="standar nilai minimum">
               Standar nilai minimum adalah batas nilai yang dipakai untuk
               menentukan apakah siswa sudah mencapai target belajar. Di halaman
-              ini batasnya adalah 68.
+              ini batasnya adalah {kkm}.
             </InfoTooltip>
           </span>
         }
         value={pass ? "Tuntas" : "Belum Tuntas"}
         detail={
           pass
-            ? `Nilai sudah melewati batas minimum (${KKM})`
-            : `Nilai belum melewati batas minimum (${KKM})`
+            ? `Nilai sudah melewati batas minimum (${kkm})`
+            : `Nilai belum melewati batas minimum (${kkm})`
         }
         tone={pass ? "success" : "destructive"}
       />
@@ -395,7 +374,7 @@ function SummaryCards({ student }: { student: StudentProfile }) {
   );
 }
 
-function IndividualProgressChart({ data }: { data: ProgressPoint[] }) {
+function IndividualProgressChart({ data, kkm }: { data: ProgressPoint[]; kkm: number }) {
   if (data.length < 2) {
     return (
       <EmptyChart icon={<LineChartIcon className="h-5 w-5" />}>
@@ -416,7 +395,7 @@ function IndividualProgressChart({ data }: { data: ProgressPoint[] }) {
           domain={[0, 100]}
           tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
         />
-        <ReferenceLine y={KKM} stroke="hsl(var(--warning))" strokeDasharray="4 4" />
+        <ReferenceLine y={kkm} stroke="hsl(var(--warning))" strokeDasharray="4 4" />
         <Tooltip contentStyle={tooltipStyle} />
         <Line
           type="monotone"
@@ -441,7 +420,7 @@ function IndividualProgressChart({ data }: { data: ProgressPoint[] }) {
   );
 }
 
-function PrePostBarChart({ data }: { data: PrePostPoint[] }) {
+function PrePostBarChart({ data, kkm }: { data: PrePostPoint[]; kkm: number }) {
   const hasData = data.some((d) => typeof d.nilai === "number");
   if (!hasData) {
     return (
@@ -463,7 +442,7 @@ function PrePostBarChart({ data }: { data: PrePostPoint[] }) {
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
         <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
         <YAxis domain={[0, 100]} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
-        <ReferenceLine y={KKM} stroke="hsl(var(--warning))" strokeDasharray="4 4" />
+        <ReferenceLine y={kkm} stroke="hsl(var(--warning))" strokeDasharray="4 4" />
         <Tooltip contentStyle={tooltipStyle} />
         <Bar dataKey="nilai" radius={[8, 8, 0, 0]} fill="url(#studentPrePostGrad)">
           {data.map((entry) => (
@@ -481,66 +460,24 @@ function PrePostBarChart({ data }: { data: PrePostPoint[] }) {
 function PersonalInsight({
   student,
   rankHistory,
+  kkm,
+  metrics,
 }: {
   student: StudentProfile;
   rankHistory: RankHistoryRow[];
+  kkm: number;
+  metrics: Record<string, boolean>;
 }) {
-  const fallback = useMemo(() => buildLocalInsight(student, rankHistory), [student, rankHistory]);
-  const [insight, setInsight] = useState(fallback);
-  const [isLoading, setIsLoading] = useState(false);
-  const [source, setSource] = useState<"local" | "ai">("local");
-
-  useEffect(() => {
-    let active = true;
-    const prompt = buildInsightPrompt(student, rankHistory);
-    const messages: ChatMessage[] = [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ];
-
-    setInsight("");
-    setSource("local");
-    setIsLoading(true);
-
-    streamAssistant({
-      messages,
-      students: student.rows,
-      onDelta: (chunk) => {
-        if (!active) return;
-        setSource("ai");
-        setInsight((prev) => prev + chunk);
-      },
-      onDone: () => {
-        if (!active) return;
-        setIsLoading(false);
-        setInsight((prev) => (prev.trim() ? prev : fallback));
-      },
-      onError: () => {
-        if (!active) return;
-        setIsLoading(false);
-        setInsight(fallback);
-      },
-    }).catch(() => {
-      if (!active) return;
-      setIsLoading(false);
-      setInsight(fallback);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [fallback, rankHistory, student]);
+  const insight = useMemo(() => buildLocalInsight(student, rankHistory, kkm, metrics), [student, rankHistory, kkm, metrics]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Bot className="h-4 w-4 text-primary" />
-        {isLoading ? "Menyusun insight personal..." : source === "ai" ? "Insight AI" : "Insight lokal"}
+        Insight berdasarkan data pribadi
       </div>
       <div className="min-h-[180px] whitespace-pre-line rounded-xl border border-primary/25 bg-primary/5 p-4 text-sm leading-6 text-foreground/90">
-        {insight || fallback}
+        {insight}
       </div>
     </div>
   );
@@ -719,7 +656,7 @@ function buildProfiles(students: Student[]): StudentProfile[] {
   const valid = students.filter((s) => s.isValid && s.name.trim());
   const grouped = new Map<string, Student[]>();
   for (const row of valid) {
-    const key = getStudentKey(row.name, row.className);
+    const key = getStudentKey(row.name, row.className, row.studentId);
     grouped.set(key, [...(grouped.get(key) ?? []), row]);
   }
 
@@ -808,18 +745,20 @@ function rankProfiles(profiles: StudentProfile[]) {
 }
 
 function buildAbsentNumbers(students: Student[]) {
-  const byClass = new Map<string, string[]>();
+  const byClass = new Map<string, Map<string, string>>();
   for (const row of students) {
     const className = normalizeClass(row.className);
-    const key = getStudentKey(row.name, row.className);
-    byClass.set(className, Array.from(new Set([...(byClass.get(className) ?? []), key])));
+    const key = getStudentKey(row.name, row.className, row.studentId);
+    const members = byClass.get(className) ?? new Map<string, string>();
+    members.set(key, row.name.trim());
+    byClass.set(className, members);
   }
 
   const result = new Map<string, number>();
-  for (const keys of byClass.values()) {
-    keys
-      .sort((a, b) => getNameFromKey(a).localeCompare(getNameFromKey(b)))
-      .forEach((key, index) => result.set(key, index + 1));
+  for (const members of byClass.values()) {
+    [...members.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .forEach(([key], index) => result.set(key, index + 1));
   }
   return result;
 }
@@ -869,7 +808,7 @@ function buildRankHistory(students: Student[], selected: StudentProfile): RankHi
   for (const meeting of meetings) {
     const byStudent = new Map<string, { scores: number[]; name: string }>();
     for (const row of meetingRows.filter((s) => (s.meeting ?? 1) === meeting)) {
-      const key = getStudentKey(row.name, row.className);
+      const key = getStudentKey(row.name, row.className, row.studentId);
       const cur = byStudent.get(key) ?? { scores: [], name: row.name };
       cur.scores.push(row.score);
       byStudent.set(key, cur);
@@ -917,13 +856,6 @@ function getPrePostScores(rows: Student[], kind: "pretest" | "posttest") {
   return scores;
 }
 
-function getNGain(pretest?: number, posttest?: number) {
-  if (typeof pretest !== "number" || typeof posttest !== "number") return undefined;
-  const denominator = 100 - pretest;
-  if (denominator <= 0) return 0;
-  return (posttest - pretest) / denominator;
-}
-
 function getNGainCategory(value?: number) {
   if (value === undefined) return "Data belum lengkap";
   if (value >= 0.7) return "Tinggi";
@@ -938,13 +870,13 @@ function getNGainExplanation(value?: number) {
   return "Peningkatan masih perlu didorong lagi 💪";
 }
 
-function buildLocalInsight(student: StudentProfile, rankHistory: RankHistoryRow[]) {
+function buildLocalInsight(student: StudentProfile, rankHistory: RankHistoryRow[], kkm: number, metrics: Record<string, boolean>) {
   const first = student.meetingScores[0]?.score;
   const last = student.meetingScores.at(-1)?.score;
   const delta = typeof first === "number" && typeof last === "number" ? round1(last - first) : undefined;
   const nGain = getNGain(student.pretest, student.posttest);
   const category = getNGainCategory(nGain);
-  const pass = typeof student.currentScore === "number" && student.currentScore >= KKM;
+  const pass = typeof student.currentScore === "number" && student.currentScore >= kkm;
   const best = student.meetingScores.reduce<{ meeting: number; score: number } | null>(
     (acc, item) => (!acc || item.score > acc.score ? item : acc),
     null,
@@ -953,37 +885,14 @@ function buildLocalInsight(student: StudentProfile, rankHistory: RankHistoryRow[
 
   return [
     `Tren: ${student.name} ${delta === undefined ? "belum memiliki cukup data pertemuan untuk membaca tren." : delta >= 0 ? `meningkat ${delta} poin dari pertemuan awal ke terbaru.` : `turun ${Math.abs(delta)} poin dari pertemuan awal ke terbaru.`}`,
-    `Kekuatan: capaian terbaik ada pada ${best ? `pertemuan ${best.meeting} dengan nilai ${best.score}` : "data yang sudah tersedia"}. Status saat ini ${pass ? "sudah melewati" : "belum melewati"} standar nilai minimum ${KKM}.`,
-    `Area perbaikan: tingkat peningkatan berada pada kategori ${category}${nGain === undefined ? " karena data nilai sebelum/sesudah belajar belum lengkap" : ` (${nGain.toFixed(2)})`}. ${getNGainExplanation(nGain)} Fokuskan latihan pada materi yang sering salah dan ulangi konsep dasar sebelum masuk soal variasi.`,
-    `Saran belajar: buat target nilai minimal ${KKM} pada latihan berikutnya, kerjakan 10-15 soal bertahap, lalu bandingkan peringkat per pertemuan${latestChange ? ` karena posisi terakhir ${latestChange > 0 ? "naik" : "turun"} ${Math.abs(latestChange)} tingkat.` : "."}`,
+    `Kekuatan: capaian terbaik ada pada ${best ? `pertemuan ${best.meeting} dengan nilai ${best.score}` : "data yang sudah tersedia"}. Status saat ini ${pass ? "sudah melewati" : "belum melewati"} standar nilai minimum ${kkm}.`,
+    ...(metrics.nGain ? [`Area perbaikan: tingkat peningkatan berada pada kategori ${category}${nGain === undefined ? " karena data nilai sebelum/sesudah belajar belum lengkap" : ` (${nGain.toFixed(2)})`}. ${getNGainExplanation(nGain)} Fokuskan latihan pada materi yang sering salah dan ulangi konsep dasar sebelum masuk soal variasi.`] : []),
+    `Saran belajar: buat target nilai minimal ${kkm} pada latihan berikutnya, kerjakan 10-15 soal bertahap, lalu bandingkan peringkat per pertemuan${latestChange ? ` karena posisi terakhir ${latestChange > 0 ? "naik" : "turun"} ${Math.abs(latestChange)} tingkat.` : "."}`,
   ].join("\n\n");
 }
 
-function buildInsightPrompt(student: StudentProfile, rankHistory: RankHistoryRow[]) {
-  return [
-    "Buat insight belajar personal dalam Bahasa Indonesia untuk satu siswa Rankify.AI.",
-    "Gunakan 4 paragraf singkat dengan label: Tren, Kekuatan, Area Perbaikan, Saran Belajar.",
-    "Gunakan bahasa awam untuk siswa dan orang tua. Jangan mengarang data di luar angka berikut.",
-    `Nama: ${student.name}`,
-    `Kelas: ${student.className}`,
-    `Absen: ${student.absentNumber}`,
-    `Nilai sebelum belajar: ${formatScore(student.pretest)}`,
-    `Nilai sesudah belajar: ${formatScore(student.posttest)}`,
-    `Angka peningkatan belajar: ${formatScore(getNGain(student.pretest, student.posttest))} (${getNGainCategory(getNGain(student.pretest, student.posttest))})`,
-    `Standar nilai minimum ${KKM}: ${(student.currentScore ?? 0) >= KKM ? "Sudah mencapai" : "Belum mencapai"}`,
-    `Peringkat di kelas: ${student.classRank ? `${student.classRank} dari ${student.totalClassRanked}` : "-"}`,
-    `Peringkat keseluruhan: ${student.overallRank ? `${student.overallRank} dari ${student.totalOverallRanked}` : "-"}`,
-    `Nilai per pertemuan: ${student.meetingScores.map((s) => `P${s.meeting}=${s.score}`).join(", ") || "-"}`,
-    `Riwayat peringkat: ${rankHistory.map((r) => `P${r.meeting}=peringkat ${r.rank ?? "-"} dari ${r.total}`).join(", ") || "-"}`,
-  ].join("\n");
-}
-
-function getStudentKey(name: string, className?: string) {
-  return `${normalizeName(name)}__${normalizeClass(className).toLowerCase()}`;
-}
-
-function getNameFromKey(key: string) {
-  return key.split("__")[0];
+function getStudentKey(name: string, className?: string, studentId?: string) {
+  return studentId ?? `${normalizeName(name)}__${normalizeClass(className).toLowerCase()}`;
 }
 
 function normalizeName(name: string) {

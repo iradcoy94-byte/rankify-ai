@@ -11,7 +11,7 @@ import type { Student } from "@/lib/types";
 
 interface Props {
   students: Student[];
-  threshold?: number;
+  threshold?: number | Record<string, number>;
   height?: number;
 }
 
@@ -19,7 +19,7 @@ interface Props {
 export function PassFailPie({ students, threshold = 68, height = 220 }: Props) {
   const data = useMemo(() => {
     const valid = students.filter((s) => s.isValid);
-    const tuntas = valid.filter((s) => s.score >= threshold).length;
+    const tuntas = valid.filter((s) => s.score >= (typeof threshold === "number" ? threshold : threshold[s.className ?? ""] ?? 68)).length;
     const belum = valid.length - tuntas;
     return [
       { name: "Tuntas", value: tuntas, color: "hsl(var(--success))" },

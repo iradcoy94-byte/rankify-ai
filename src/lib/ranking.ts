@@ -39,6 +39,17 @@ export function validateStudent(s: Student): Student {
   return { ...s, isValid: true, error: undefined };
 }
 
+export function calculateNGain(pretest?: number, posttest?: number): number | undefined {
+  if (typeof pretest !== "number" || typeof posttest !== "number" || !Number.isFinite(pretest) || !Number.isFinite(posttest)) return undefined;
+  const denominator = 100 - pretest;
+  if (denominator <= 0) return 0;
+  return (posttest - pretest) / denominator;
+}
+
+export function meetsKkm(score: number, kkm = 68): boolean {
+  return Number.isFinite(score) && Number.isFinite(kkm) && score >= kkm;
+}
+
 /**
  * Apply dense ranking by score (descending), grouped per class.
  * Students without a class share a single "Tanpa Kelas" group.

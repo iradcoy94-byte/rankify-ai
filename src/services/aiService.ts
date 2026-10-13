@@ -1,12 +1,15 @@
-import type { ChatMessage, Student } from "@/lib/types";
-import { api, getToken } from "@/services/api";
+import type { ChatMessage } from "@/lib/types";
+import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/services/api";
+import type { Role } from "@/context/AuthContext";
 
-/** Streams deltas, accepting completion only after the SSE terminal marker. */
-const CHAT_URL = api.chatUrl();
-
+/**
+ * Streams an AI Assistant reply from the backend edge function.
+ * Yields incremental text deltas via onDelta — never buffers the entire response.
+ */
 interface StreamArgs {
   messages: ChatMessage[];
-  students: Student[];
+  role?: Role;
   onDelta: (chunk: string) => void;
   onDone: () => void;
   onError: (status: number, message: string) => void;
@@ -14,27 +17,28 @@ interface StreamArgs {
 
 export async function streamAssistant({
   messages,
-  students,
+  role = "siswa",
   onDelta,
   onDone,
   onError,
 }: StreamArgs): Promise<void> {
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-  let finished = false;
-  const fail = (status: number, message: string) => {
-    if (finished) return;
-    finished = true;
-    onError(status, message);
-  };
-  try {
-    const resp = await fetch(CHAT_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${getToken() ?? ""}`,
-      },
-      body: JSON.stringify({ messages, students }),
-    });
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    onError(401, "Sesi login sudah berakhir. Masuk kembali untuk menggunakan tutor.");
+    return;
+  }
+  const functionName = role === "siswa" ? "tutor-chat" : "teacher-insights";
+  const resp = await fetch(api.chatUrl(functionName), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    },
+    // The function resolves the authenticated student's own progress server-side.
+    // Names, NISN, and browser-provided class datasets are never sent to the model.
+    body: JSON.stringify({ messages }),
+  });
 
     if (!resp.ok) {
       let msg = "Gagal menghubungi AI";

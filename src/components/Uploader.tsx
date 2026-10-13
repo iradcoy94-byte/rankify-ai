@@ -67,7 +67,7 @@ export function Uploader({ onTextExtracted }: UploaderProps) {
     setProgress(0);
     try {
       const text = await runOcr(file, setProgress);
-      toast.success("OCR selesai — data ditambahkan ke tabel");
+      toast.success("OCR selesai. Tinjau teks hasil pengenalan sebelum mengimpor.");
       await onTextExtracted(text);
       // Reset preview so user can immediately add another photo.
       handleClear();

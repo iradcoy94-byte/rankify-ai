@@ -1,7 +1,8 @@
 import { Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { GraduationCap, UserRound, ArrowRight } from "lucide-react";
+import { GraduationCap, UserRound, ShieldCheck, ArrowRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { isSupabaseConfigured } from "@/integrations/supabase/client";
 
 /** Landing at /login — pick which role to sign in as. */
 export default function LoginChooser() {
@@ -22,6 +23,13 @@ export default function LoginChooser() {
       title: "Masuk sebagai Peserta Didik",
       desc: "Tanya jawab dengan AI Assitant, lihat peringkatmu, dan analisis peningkatanmu.",
       gradient: "from-accent/25 via-accent/10 to-transparent",
+    },
+    {
+      to: "/login/admin",
+      icon: ShieldCheck,
+      title: "Masuk sebagai Administrator",
+      desc: "Akses administrasi sekolah tersedia pada tahap penggunaan sekolah.",
+      gradient: "from-secondary via-secondary/40 to-transparent",
     },
   ];
 
@@ -44,9 +52,10 @@ export default function LoginChooser() {
           <p className="mt-2 text-muted-foreground">
             Pilih peran untuk melanjutkan.
           </p>
+          {!isSupabaseConfigured && <p role="alert" className="mx-auto mt-4 max-w-xl rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">Supabase belum dikonfigurasi. Isi VITE_SUPABASE_URL dan VITE_SUPABASE_PUBLISHABLE_KEY sebelum login.</p>}
         </motion.div>
 
-        <div className="grid w-full max-w-3xl gap-5 md:grid-cols-2">
+        <div className="grid w-full max-w-4xl gap-5 md:grid-cols-3">
           {cards.map((c, i) => (
             <motion.div
               key={c.to}

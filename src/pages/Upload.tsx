@@ -16,8 +16,11 @@ import {
   Camera,
   FileSpreadsheet,
   Layers,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -28,6 +31,8 @@ import {
 } from "@/components/ui/select";
 import type { Student, LearningModel } from "@/lib/types";
 import { EXPERIMENT_CLASSES } from "@/lib/types";
+import { LegacyDataMigration } from "@/components/LegacyDataMigration";
+import { QuarantineReview } from "@/components/QuarantineReview";
 
 /**
  * Upload page — dua metode input:
@@ -50,7 +55,7 @@ const NONE_CLASS = "__none__";
 
 export default function Upload() {
   const { isReadOnly } = useAuth();
-  const { appendStudents, stats } = useStudentsCtx();
+  const { appendStudents, stats, refresh } = useStudentsCtx();
   const navigate = useNavigate();
 
   // OCR-specific controls (manual)
@@ -60,6 +65,7 @@ export default function Upload() {
     EXPERIMENT_CLASSES[0].label,
   );
   const [fallbackClass, setFallbackClass] = useState<string>("");
+  const [ocrRows, setOcrRows] = useState<Student[] | null>(null);
 
   if (isReadOnly) {
     return <Navigate to="/peringkat-keseluruhan" replace />;
@@ -91,10 +97,14 @@ export default function Upload() {
     const finalRows = parsed
       .map((s) => ({ ...s, className: meta.className ?? s.className, model: meta.model ?? s.model }))
       .map(applyCategory);
-    if (!await appendStudents(finalRows)) return;
-    toast.success(
-      `${finalRows.length} siswa ditambahkan (${CATEGORY_OPTIONS.find((c) => c.value === category)?.label}) via OCR`,
-    );
+    setOcrRows(finalRows);
+  };
+
+  const confirmOcrImport = () => {
+    if (!ocrRows?.length) return;
+    void appendStudents(ocrRows);
+    toast.success(`${ocrRows.length} baris OCR dikirim untuk pencocokan dan verifikasi.`);
+    setOcrRows(null);
     navigate("/peringkat-keseluruhan");
   };
 
@@ -281,8 +291,15 @@ export default function Upload() {
             </div>
 
             <Uploader onTextExtracted={handleOcrExtracted} />
+            {ocrRows && <div className="space-y-3 rounded-xl border border-border bg-card/50 p-4">
+              <div><h3 className="font-semibold">Tinjau hasil OCR</h3><p className="text-xs text-muted-foreground">Pastikan nama dan nilai benar. Baris yang tidak cocok dengan roster akan dikarantina.</p></div>
+              <div className="max-h-60 overflow-auto rounded-lg border border-border"><table className="w-full text-xs"><thead className="sticky top-0 bg-secondary"><tr><th className="p-2 text-left">Nama</th><th className="p-2 text-left">Kelas</th><th className="p-2 text-left">Nilai</th><th className="p-2 text-left">Validasi</th></tr></thead><tbody>{ocrRows.map((row) => <tr key={row.id} className="border-t border-border/60"><td className="p-2">{row.name}</td><td className="p-2">{row.className || "—"}</td><td className="p-2">{Number.isNaN(row.score) ? "—" : row.score}</td><td className="p-2">{row.isValid ? <span className="text-success">Valid</span> : <span className="inline-flex items-center gap-1 text-destructive"><AlertTriangle className="h-3 w-3" />{row.error}</span>}</td></tr>)}</tbody></table></div>
+              <div className="flex gap-2"><Button variant="outline" onClick={() => setOcrRows(null)}>Buang hasil</Button><Button variant="hero" className="flex-1" onClick={confirmOcrImport}><CheckCircle2 className="h-4 w-4" />Tinjau dan impor {ocrRows.length} baris</Button></div>
+            </div>}
           </TabsContent>
         </Tabs>
+      <div className="mt-5"><LegacyDataMigration onImport={(rows) => { void appendStudents(rows); }} /></div>
+      <QuarantineReview onResolved={refresh} />
       </motion.div>
     </section>
   );

@@ -61,7 +61,7 @@ function isSubHeaderRow(row: unknown[]): boolean {
   if (nonNull.length === 0) return false;
   return nonNull.every((c) => {
     const s = String(c).toLowerCase().trim();
-    return s === "nama" || s === "nilai" || s === "name" || s === "score" || s === "skor";
+    return ["nisn", "nis", "nama", "nilai", "name", "score", "skor"].includes(s);
   });
 }
 
@@ -70,6 +70,7 @@ function isSubHeaderRow(row: unknown[]): boolean {
 
 interface ColGroup {
   section: SectionLabel;
+  nisnCol?: number;
   nameCol: number;
   valueCol: number;
 }
@@ -101,11 +102,13 @@ function findColGroups(headerRow: unknown[], subHeaderRow: unknown[]): ColGroup[
   for (const [index, { col, section }] of sections.entries()) {
     let nameCol = -1;
     let valueCol = -1;
+    let nisnCol = -1;
 
     // Scan rightward up to the next section (or end of row + 8 cols slack)
     const scanEnd = Math.min(subHeaderRow.length, sections[index + 1]?.col ?? subHeaderRow.length);
     for (let c = col; c < scanEnd; c++) {
       const s = String(subHeaderRow[c] ?? "").toLowerCase().trim();
+      if (s === "nisn" || s === "nis") { nisnCol = c; continue; }
       if (s === "nama" || s === "name") { nameCol = c; continue; }
       if ((s === "nilai" || s === "score" || s === "skor") && nameCol !== -1) {
         valueCol = c;
@@ -114,7 +117,7 @@ function findColGroups(headerRow: unknown[], subHeaderRow: unknown[]): ColGroup[
     }
 
     if (nameCol !== -1 && valueCol !== -1) {
-      groups.push({ section, nameCol, valueCol });
+      groups.push({ section, nisnCol: nisnCol >= col ? nisnCol : undefined, nameCol, valueCol });
     }
   }
 
@@ -213,8 +216,9 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
 
       totalRaw++;
 
-      for (const { section, nameCol, valueCol } of colGroups) {
+      for (const { section, nisnCol, nameCol, valueCol } of colGroups) {
         const rawName = String(row[nameCol] ?? "").trim();
+        const nisn = nisnCol === undefined ? undefined : String(row[nisnCol] ?? "").trim() || undefined;
         const rawValue = row[valueCol];
         const value = typeof rawValue === "string" ? rawValue.trim().replace(",", ".") : rawValue;
         const score = (typeof value === "number" || (typeof value === "string" && value !== "")) ? Number(value) : NaN;
@@ -239,6 +243,7 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
 
         const draft: Student = {
           id: uid(),
+          nisn,
           name: rawName,
           score,
           className,

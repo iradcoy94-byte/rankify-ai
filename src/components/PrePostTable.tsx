@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/tooltip";
 import type { Student } from "@/lib/types";
 
-const PASS_THRESHOLD = 68;
 
 function abbrevClass(c?: string): string {
   if (!c) return "—";
@@ -32,6 +31,7 @@ interface Props {
   onRemove: (id: string) => void;
   hideClass?: boolean;
   readOnly?: boolean;
+  threshold?: number | Record<string, number>;
 }
 
 /**
@@ -46,6 +46,7 @@ export function PrePostTable({
   onRemove,
   hideClass = false,
   readOnly = false,
+  threshold = 68,
 }: Props) {
   const rows = useMemo(() => {
     return students.filter((s) => {
@@ -90,7 +91,8 @@ export function PrePostTable({
                   ? (s.pretest ?? (Number.isNaN(s.score) ? undefined : s.score))
                   : (s.posttest ?? (Number.isNaN(s.score) ? undefined : s.score));
               const numeric = typeof value === "number" && !Number.isNaN(value);
-              const passed = numeric && value! >= PASS_THRESHOLD;
+              const rowThreshold = typeof threshold === "number" ? threshold : threshold[s.className ?? ""] ?? 68;
+              const passed = numeric && value! >= rowThreshold;
               return (
                 <tr
                   key={s.id}

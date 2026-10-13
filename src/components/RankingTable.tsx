@@ -29,9 +29,6 @@ import {
 import type { Student, LearningModel } from "@/lib/types";
 import { LEARNING_MODELS } from "@/lib/types";
 
-/** Threshold KKM: ≥ 68 → Tuntas, < 68 → Belum Tuntas */
-const PASS_THRESHOLD = 68;
-
 /** Shorten class label for compact display in the table. */
 function abbrevClass(c?: string): string {
   if (!c) return "—";
@@ -64,6 +61,7 @@ interface RankingTableProps {
   /** Notifies parent when meeting filter changes. */
   onMeetingFilterChange?: (val: number | "all") => void;
   readOnly?: boolean;
+  threshold?: number | Record<string, number>;
 }
 
 type SortKey = "rank" | "name" | "score" | "class" | "meeting";
@@ -83,6 +81,7 @@ export function RankingTable({
   meetingFilter,
   onMeetingFilterChange,
   readOnly = false,
+  threshold = 68,
 }: RankingTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -345,7 +344,7 @@ export function RankingTable({
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                             —
                           </span>
-                        ) : s.score >= PASS_THRESHOLD ? (
+                        ) : s.score >= (typeof threshold === "number" ? threshold : threshold[s.className ?? ""] ?? 68) ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
                             <CheckCircle2 className="h-3 w-3" /> Tuntas
                           </span>

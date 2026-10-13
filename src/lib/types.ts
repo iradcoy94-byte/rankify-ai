@@ -28,6 +28,13 @@ export type ScoreKind = "pretest" | "posttest" | "meeting";
 export interface Student {
   /** Stable client-side id for React keys & edits */
   id: string;
+  /** Auth-backed student profile id (not present on unreviewed OCR rows). */
+  studentId?: string;
+  /** National student identifier used for import matching. */
+  nisn?: string;
+  /** Supabase class and research period ids when persisted. */
+  classId?: string;
+  periodId?: string;
   /** Student name (editable) */
   name: string;
   /** Score 0–100 (editable). Stored as number; NaN means empty. */

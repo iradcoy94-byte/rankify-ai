@@ -12,11 +12,15 @@ import { useStudentsCtx } from "@/context/StudentsContext";
 import { StatChip } from "@/components/StatChip";
 import { EmptyState } from "@/components/EmptyState";
 import { recomputeGlobal } from "@/lib/ranking";
+import { useAuth } from "@/context/AuthContext";
+import { StudentClassRanking } from "@/components/StudentClassRanking";
+import { NGainChart } from "@/components/NGainChart";
 
 /** Overall ranking across all classes. */
 export default function OverallRanking() {
-  const { students, stats, updateField, removeRow, addRow, clear, canManageData } =
+  const { students, stats, classKkm, activeMetrics, updateField, removeRow, addRow, clear, canManageData } =
     useStudentsCtx();
+  const { isReadOnly } = useAuth();
   const [meetingFilter, setMeetingFilter] = useState<number | "all">("all");
 
   // Split rows: meeting/legacy → main ranking; pretest/posttest → dedicated tables.
@@ -38,6 +42,8 @@ export default function OverallRanking() {
         : meetingRowsAll.filter((s) => (s.meeting ?? 1) === meetingFilter);
     return recomputeGlobal(filtered);
   }, [meetingRowsAll, meetingFilter]);
+
+  if (isReadOnly) return <StudentClassRanking students={students} />;
 
   return (
     <section className="container mt-8 space-y-8">
@@ -75,17 +81,19 @@ export default function OverallRanking() {
             meetingFilter={meetingFilter}
             onMeetingFilterChange={setMeetingFilter}
             readOnly={!canManageData}
+            threshold={classKkm}
           />
 
           <TopRankersTable students={meetingRowsAll} />
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          {activeMetrics.prepost && <div className="grid gap-6 lg:grid-cols-2">
             <PrePostTable
               students={students}
               kind="pretest"
               onUpdate={updateField}
               onRemove={removeRow}
               readOnly={!canManageData}
+              threshold={classKkm}
             />
             <PrePostTable
               students={students}
@@ -93,8 +101,16 @@ export default function OverallRanking() {
               onUpdate={updateField}
               onRemove={removeRow}
               readOnly={!canManageData}
+              threshold={classKkm}
             />
-          </div>
+          </div>}
+
+          {activeMetrics.nGain && <ChartCard
+            title={activeMetrics.modelComparison ? "N-Gain menurut model pembelajaran" : "N-Gain kelas"}
+            subtitle="Perbandingan peningkatan nilai pre-test dan post-test pada periode aktif"
+          >
+            <NGainChart students={students} groupByModel={activeMetrics.modelComparison} />
+          </ChartCard>}
 
           {/* Charts grid — fills the previously empty side area */}
           <div className="grid gap-6 lg:grid-cols-3">
@@ -107,9 +123,9 @@ export default function OverallRanking() {
             </ChartCard>
             <ChartCard
               title="Ketuntasan Belajar"
-              subtitle="Tuntas vs belum tuntas (KKM = 68)"
+              subtitle="Tuntas vs belum tuntas berdasarkan KKM tiap kelas"
             >
-              <PassFailPie students={students} />
+              <PassFailPie students={students} threshold={classKkm} />
             </ChartCard>
             <ChartCard
               title="Distribusi Nilai"

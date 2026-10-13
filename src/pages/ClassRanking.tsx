@@ -18,13 +18,16 @@ import { useStudentsCtx } from "@/context/StudentsContext";
 import { recompute } from "@/lib/ranking";
 import { StatChip } from "@/components/StatChip";
 import { EmptyState } from "@/components/EmptyState";
+import { StudentClassRanking } from "@/components/StudentClassRanking";
+import { useAuth } from "@/context/AuthContext";
 
 const NONE = "__none__";
 
 /** Per-class ranking with class filter. */
 export default function ClassRanking() {
-  const { students, classes, updateField, removeRow, addRow, canManageData } =
+  const { students, classes, classKkm, activeMetrics, updateKkm, updateField, removeRow, addRow, canManageData } =
     useStudentsCtx();
+  const { isReadOnly } = useAuth();
   const [classFilter, setClassFilter] = useState<string>(NONE);
   const [meetingFilter, setMeetingFilter] = useState<number | "all">("all");
 
@@ -68,6 +71,9 @@ export default function ClassRanking() {
     return recompute(filtered);
   }, [meetingRowsAll, meetingFilter]);
 
+  if (isReadOnly) return <StudentClassRanking students={students} />;
+  const currentKkm = classKkm[classFilter] ?? 68;
+
   return (
     <section className="container mt-8 space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -77,6 +83,8 @@ export default function ClassRanking() {
             Pilih kelas untuk melihat peringkat di dalam kelas tersebut.
           </p>
         </div>
+
+        {classFilter !== NONE && canManageData && <label key={classFilter} className="flex items-center gap-2 text-xs text-muted-foreground">KKM kelas <input aria-label={`KKM ${classFilter}`} className="h-9 w-20 rounded-md border border-input bg-background px-2 text-sm text-foreground" type="number" min={0} max={100} defaultValue={currentKkm} onBlur={(event) => { if (Number(event.target.value) !== currentKkm) void updateKkm(classFilter, Number(event.target.value)); }} /></label>}
 
         {students.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
@@ -122,6 +130,7 @@ export default function ClassRanking() {
             meetingFilter={meetingFilter}
             onMeetingFilterChange={setMeetingFilter}
             readOnly={!canManageData}
+            threshold={currentKkm}
           />
 
           <TopRankersTable
@@ -131,7 +140,7 @@ export default function ClassRanking() {
             }`}
           />
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          {activeMetrics.prepost && <div className="grid gap-6 lg:grid-cols-2">
             <PrePostTable
               students={classFilteredAll}
               kind="pretest"
@@ -139,6 +148,7 @@ export default function ClassRanking() {
               onRemove={removeRow}
               hideClass
               readOnly={!canManageData}
+              threshold={currentKkm}
             />
             <PrePostTable
               students={classFilteredAll}
@@ -147,8 +157,9 @@ export default function ClassRanking() {
               onRemove={removeRow}
               hideClass
               readOnly={!canManageData}
+              threshold={currentKkm}
             />
-          </div>
+          </div>}
 
           <div className="grid gap-6 lg:grid-cols-3">
             <ChartCard
@@ -160,9 +171,9 @@ export default function ClassRanking() {
             </ChartCard>
             <ChartCard
               title="Ketuntasan Belajar"
-              subtitle="Tuntas vs belum tuntas (KKM = 68)"
+              subtitle={`Tuntas vs belum tuntas (KKM = ${currentKkm})`}
             >
-              <PassFailPie students={classFiltered} />
+              <PassFailPie students={classFiltered} threshold={currentKkm} />
             </ChartCard>
             <ChartCard
               title="Distribusi Nilai"

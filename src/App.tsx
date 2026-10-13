@@ -17,6 +17,10 @@ import Analysis from "./pages/Analysis";
 import LoginChooser from "./pages/LoginChooser";
 import LoginRole from "./pages/LoginRole";
 import StudentAssistant from "./pages/StudentAssistant";
+import Materials from "./pages/Materials";
+import ChangePassword from "./pages/ChangePassword";
+import Settings from "./pages/Settings";
+import Administration from "./pages/Administration";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -33,11 +37,16 @@ const App = () => (
               <Route path="/login" element={<LoginChooser />} />
               <Route path="/login/guru" element={<LoginRole role="guru" />} />
               <Route path="/login/siswa" element={<LoginRole role="siswa" />} />
+              <Route path="/login/admin" element={<LoginRole role="admin" />} />
 
               <Route element={<RequireAuth />}>
+                <Route path="/ubah-sandi" element={<ChangePassword />} />
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<RoleHome />} />
                   <Route path="/upload" element={<TeacherOnly><Upload /></TeacherOnly>} />
+                  <Route path="/materi" element={<TeacherOnly><Materials /></TeacherOnly>} />
+                  <Route path="/pengaturan" element={<TeacherOnly><Settings /></TeacherOnly>} />
+                  <Route path="/administrasi" element={<AdminOnly><Administration /></AdminOnly>} />
                   <Route path="/peringkat-keseluruhan" element={<OverallRanking />} />
                   <Route path="/peringkat-kelas" element={<ClassRanking />} />
                   <Route path="/analisis" element={<Analysis />} />
@@ -63,6 +72,12 @@ function RoleHome() {
 
 function TeacherOnly({ children }: { children: ReactNode }) {
   const { session } = useAuth();
-  if (session?.role !== "guru") return <Navigate to="/" replace />;
+  if (session?.role !== "guru" && session?.role !== "admin") return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function AdminOnly({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
+  if (session?.role !== "admin") return <Navigate to="/" replace />;
   return <>{children}</>;
 }

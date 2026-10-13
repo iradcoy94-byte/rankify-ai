@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, GraduationCap, Lock, LogIn, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { DEMO_CREDENTIALS, useAuth, type Role } from "@/context/AuthContext";
+import { useAuth, type Role } from "@/context/AuthContext";
 
 interface Props {
   role: Role;
@@ -13,16 +13,14 @@ interface Props {
 export default function LoginRole({ role }: Props) {
   const { session, login } = useAuth();
   const navigate = useNavigate();
-  const preset = DEMO_CREDENTIALS[role];
-
-  const [email, setEmail] = useState(preset.email);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   if (session) return <Navigate to="/" replace />;
 
-  const isGuru = role === "guru";
-  const Icon = isGuru ? GraduationCap : UserRound;
+  const isGuru = role === "guru" || role === "admin";
+  const Icon = role === "siswa" ? UserRound : GraduationCap;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -65,11 +63,11 @@ export default function LoginRole({ role }: Props) {
             </div>
             <div>
               <h1 className="text-xl font-bold">
-                Masuk sebagai {isGuru ? "Guru" : "Peserta Didik"}
+                Masuk sebagai {role === "admin" ? "Administrator" : isGuru ? "Guru" : "Peserta Didik"}
               </h1>
               <p className="text-xs text-muted-foreground">
                 {isGuru
-                  ? "Akses penuh untuk mengelola nilai & analisis."
+                  ? "Masuk ke ruang kerja sesuai peran dan kelas yang ditugaskan."
                   : "Akses terbatas read-only untuk melihat ranking & analisis."}
               </p>
             </div>
@@ -100,7 +98,7 @@ export default function LoginRole({ role }: Props) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                placeholder="rankify123"
+                placeholder="Kata sandi"
                 className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-smooth focus:border-primary"
               />
             </div>
@@ -118,10 +116,7 @@ export default function LoginRole({ role }: Props) {
 
           <div className="mt-5 flex items-start gap-2 rounded-lg border border-dashed border-border bg-background/50 p-3 text-xs text-muted-foreground">
             <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-            <p>
-              Demo akun: <span className="font-semibold text-foreground">{preset.email}</span>
-              {" · "}Kata sandi: <span className="font-semibold text-foreground">rankify123</span>
-            </p>
+            <p>Gunakan akun pilot yang dibuat oleh administrator Supabase. Hubungi pengelola sekolah jika akun belum tersedia.</p>
           </div>
         </motion.div>
       </div>

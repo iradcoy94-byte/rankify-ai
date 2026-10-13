@@ -1,4 +1,13 @@
 project_id = "afjmiacvibdjxlfiacgq"
 
-[functions.ai-assistant]
-verify_jwt = false
+[functions.tutor-chat]
+verify_jwt = true
+
+[functions.teacher-insights]
+verify_jwt = true
+
+[functions.admin-create-user]
+verify_jwt = true
+
+[functions.admin-account-action]
+verify_jwt = true

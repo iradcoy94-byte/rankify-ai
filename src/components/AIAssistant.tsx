@@ -15,8 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { streamAssistant } from "@/services/aiService";
-import { getToken } from "@/services/api";
 import type { ChatMessage, Student } from "@/lib/types";
+import { useAuth } from "@/context/AuthContext";
 
 interface AssistantProps {
   students: Student[];
@@ -27,6 +27,12 @@ const QUICK_PROMPTS = [
   "Bantu saya memahami soal matematika",
   "Buat contoh soal serupa dan pembahasannya",
   "Cek cara pengerjaan saya",
+];
+const TEACHER_PROMPTS = [
+  "Ringkas perkembangan nilai per kelas",
+  "Identifikasi asesmen dengan rata-rata terendah",
+  "Sarankan tindak lanjut dari ringkasan nilai",
+  "Jelaskan perubahan pre-test dan post-test",
 ];
 
 interface ImageAttachment {
@@ -76,6 +82,8 @@ export function AssistantChatSurface({
   compact = false,
   fullPage = false,
 }: AssistantProps & { compact?: boolean; fullPage?: boolean }) {
+  void students;
+  const { session } = useAuth();
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -92,11 +100,6 @@ export function AssistantChatSurface({
   const send = async (text: string, images = attachments) => {
     const trimmed = text.trim();
     if ((!trimmed && images.length === 0) || isLoading) return;
-
-    if (!getToken()) {
-      toast.error("AI Assistant membutuhkan backend/API aktif agar semua siswa memakai sumber jawaban yang sama.");
-      return;
-    }
 
     const userMsg: ChatMessage = {
       role: "user",
@@ -125,7 +128,7 @@ export function AssistantChatSurface({
     try {
       await streamAssistant({
         messages: next,
-        students,
+        role: session?.role,
         onDelta: upsertAssistant,
         onDone: () => setIsLoading(false),
         onError: (_status, msg) => {
@@ -150,9 +153,9 @@ export function AssistantChatSurface({
             <Bot className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="min-w-0 leading-tight">
-            <p className="font-semibold">{compact ? "AI Assistant" : "AI Assistant Matematika"}</p>
+            <p className="font-semibold">{session?.role === "siswa" ? "Tutor Matematika" : "Insight AI Guru"}</p>
             <p className="truncate text-xs text-muted-foreground">
-              Satu API dan satu konteks untuk pembahasan yang konsisten
+              {session?.role === "siswa" ? "Belajar dari materi yang disetujui guru" : "Ringkasan anonim dari kelas yang ditugaskan"}
             </p>
           </div>
         </div>
@@ -161,7 +164,7 @@ export function AssistantChatSurface({
       {isEmptyFullPage ? (
         <div className="flex flex-1 items-center justify-center px-4 pb-20">
           <div className="w-full max-w-3xl">
-            <EmptyAssistantState compact={compact} fullPage={fullPage} onPrompt={send} />
+            <EmptyAssistantState compact={compact} fullPage={fullPage} onPrompt={send} role={session?.role ?? "siswa"} />
             <ChatComposer
               compact={compact}
               fullPage={fullPage}
@@ -183,7 +186,7 @@ export function AssistantChatSurface({
             }`}
           >
             {messages.length === 0 && (
-              <EmptyAssistantState compact={compact} fullPage={fullPage} onPrompt={send} />
+              <EmptyAssistantState compact={compact} fullPage={fullPage} onPrompt={send} role={session?.role ?? "siswa"} />
             )}
             {messages.map((m, i) => (
               <Bubble key={i} role={m.role} content={m.content} compact={compact} />
@@ -365,10 +368,12 @@ function EmptyAssistantState({
   compact,
   fullPage,
   onPrompt,
+  role,
 }: {
   compact: boolean;
   fullPage: boolean;
   onPrompt: (prompt: string) => void;
+  role: string;
 }) {
   return (
     <div className="mx-auto flex h-full max-w-3xl flex-col justify-center py-8 text-center">
@@ -388,7 +393,7 @@ function EmptyAssistantState({
       )}
       {!fullPage && (
         <div className="mt-6 grid gap-2 sm:grid-cols-2">
-          {QUICK_PROMPTS.map((prompt) => (
+          {(role === "siswa" ? QUICK_PROMPTS : TEACHER_PROMPTS).map((prompt) => (
             <button
               key={prompt}
               onClick={() => onPrompt(prompt)}
