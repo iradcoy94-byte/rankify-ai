@@ -1,6 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamAssistant } from "./aiService";
-vi.mock("@/services/api", () => ({ api: { chatUrl: () => "/__mock_api__/chat" }, getToken: () => "mock-token" }));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: {
+          session: {
+            access_token: "mock-token",
+          },
+        },
+      }),
+    },
+  },
+}));
+vi.mock("@/services/api", () => ({ 
+  api: { 
+    chatUrl: () => "/__mock_api__/chat" }, getToken: () => "mock-token" 
+  }
+));
 
 const delta = (text: string) => `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`;
 const terminal = "data: [DONE]\n\n";

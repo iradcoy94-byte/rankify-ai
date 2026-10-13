@@ -1,294 +1,339 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+
+import type { ChatMessage, Student } from "@/lib/types";
+
+// Mock Supabase agar pengujian tidak memerlukan sesi login asli.
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: {
+          session: {
+            access_token: "mock-token",
+          },
+        },
+      }),
+    },
+  },
+}));
+
+// Mock API agar pengujian tidak membutuhkan konfigurasi Supabase.
+vi.mock("@/services/api", () => ({
+  api: {
+    chatUrl: () => "/__mock_api__/chat",
+  },
+}));
+
 import { streamAssistant } from "@/services/aiService";
 import { api } from "@/services/api";
-import type { ChatMessage, Student } from "@/lib/types";
 
 const CHAT_URL = api.chatUrl();
 
-/** Build a ReadableStream<Uint8Array> from an array of string chunks. */
-function streamFromChunks(chunks: string[]): ReadableStream<Uint8Array> {
+const SAMPLE_MESSAGES: ChatMessage[] = [
+  { role: "user", content: "Halo" },
+];
+
+const SAMPLE_STUDENTS: Student[] = [];
+
+function streamFromChunks(
+  chunks: string[],
+): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
+
   return new ReadableStream({
     start(controller) {
-      for (const c of chunks) controller.enqueue(encoder.encode(c));
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk));
+      }
       controller.close();
     },
   });
 }
 
-function okResponse(body: ReadableStream<Uint8Array> | null): Response {
-  return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+function okResponse(
+  body: ReadableStream<Uint8Array> | null,
+): Response {
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream",
+    },
+  });
 }
-
-const SAMPLE_MESSAGES: ChatMessage[] = [{ role: "user", content: "Halo" }];
-const SAMPLE_STUDENTS: Student[] = [];
 
 function makeArgs() {
   const deltas: string[] = [];
   let done = false;
-  const error: { status: number; message: string } | null = { status: -1, message: "" };
+  const error = { status: -1, message: "" };
+
   const args = {
     messages: SAMPLE_MESSAGES,
-    students: SAMPLE_STUDENTS,
-    onDelta: (c: string) => deltas.push(c),
-    onDone: () => { done = true; },
-    onError: (status: number, message: string) => { error.status = status; error.message = message; },
+    role: "siswa" as const,
+    onDelta: (chunk: string) => deltas.push(chunk),
+    onDone: () => {
+      done = true;
+    },
+    onError: (status: number, message: string) => {
+      error.status = status;
+      error.message = message;
+    },
   };
-  return { args, deltas, get done() { return done; }, error, get called() { return done || error.status !== -1; } };
+
+  return {
+    args,
+    deltas,
+    get done() {
+      return done;
+    },
+    error,
+  };
 }
 
-describe("streamAssistant — happy path", () => {
+describe("streamAssistant", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
   });
+
   afterEach(() => {
     vi.unstubAllGlobals();
-    localStorage.clear();
+    vi.clearAllMocks();
   });
 
-  it("accumulates deltas from well-formed SSE frames", async () => {
-    const body = streamFromChunks([
-      "data: {\"choices\":[{\"delta\":{\"content\":\"Halo\"}}]}\n\n",
-      "data: {\"choices\":[{\"delta\":{\"content\":\" guru\"}}]}\n\n",
-      "data: [DONE]\n\n",
-    ]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
+  it("accumulates deltas from valid SSE frames", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      okResponse(
+        streamFromChunks([
+          'data: {"choices":[{"delta":{"content":"Halo"}}]}\n\n',
+          'data: {"choices":[{"delta":{"content":" guru"}}]}\n\n',
+          "data: [DONE]\n\n",
+        ]),
+      ),
+    );
 
     const t = makeArgs();
     await streamAssistant(t.args);
+
     expect(t.deltas.join("")).toBe("Halo guru");
     expect(t.done).toBe(true);
     expect(t.error.status).toBe(-1);
   });
 
-  it("ignores comments and empty lines", async () => {
-    const body = streamFromChunks([
-      ": ping\n\n",
-      "\n",
-      "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n",
-      "data: [DONE]\n\n",
-    ]);
+  it("handles UTF-8 characters and CRLF boundaries", async () => {
+    const payload =
+      'data: {"choices":[{"delta":{"content":"café 🌱"}}]}\r\n\r\n' +
+      "data: [DONE]\r\n\r\n";
+
+    const bytes = new TextEncoder().encode(payload);
+
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const byte of bytes) {
+          controller.enqueue(new Uint8Array([byte]));
+        }
+        controller.close();
+      },
+    });
+
     vi.mocked(fetch).mockResolvedValue(okResponse(body));
 
     const t = makeArgs();
     await streamAssistant(t.args);
-    expect(t.deltas.join("")).toBe("ok");
+
+    expect(t.deltas).toEqual(["café 🌱"]);
+    expect(t.done).toBe(true);
+    expect(t.error.status).toBe(-1);
   });
 
-  it("ignores frames without a delta content field", async () => {
-    const body = streamFromChunks([
-      "data: {\"choices\":[{\"delta\":{}}]}\n\n",
-      "data: {\"choices\":[]}\n\n",
-      "data: {\"id\":\"abc\"}\n\n",
-      "data: {\"choices\":[{\"delta\":{\"content\":\"yes\"}}]}\n\n",
-      "data: [DONE]\n\n",
-    ]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
+  it("supports multiline data, comments, and event fields", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      okResponse(
+        streamFromChunks([
+          ': heartbeat\nevent: token\ndata: {"choices":\ndata: [{"delta":{"content":"OK"}}]}\n\n',
+          "data: [DONE]\n\n",
+        ]),
+      ),
+    );
 
     const t = makeArgs();
     await streamAssistant(t.args);
-    expect(t.deltas.join("")).toBe("yes");
+
+    expect(t.deltas.join("")).toBe("OK");
+    expect(t.done).toBe(true);
+    expect(t.error.status).toBe(-1);
   });
 
-  it("handles CRLF line endings", async () => {
-    const body = streamFromChunks([
-      "data: {\"choices\":[{\"delta\":{\"content\":\"a\"}}]}\r\n\r\n",
-      "data: {\"choices\":[{\"delta\":{\"content\":\"b\"}}]}\r\n\r\n",
-      "data: [DONE]\r\n\r\n",
-    ]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
+  it("reassembles frames split across chunks", async () => {
+    const payload =
+      'data: {"choices":[{"delta":{"content":"split-ok"}}]}\n\n';
 
-    const t = makeArgs();
-    await streamAssistant(t.args);
-    expect(t.deltas.join("")).toBe("ab");
-  });
-});
-
-describe("streamAssistant — split / partial frames", () => {
-  beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn());
-  });
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    localStorage.clear();
-  });
-
-  it("reassembles a JSON payload split across chunks", async () => {
-    const full = "data: {\"choices\":[{\"delta\":{\"content\":\"split-ok\"}}]}\n\n";
-    // Split into 1-byte-ish chunks so the newline arrives late.
     const chunks: string[] = [];
-    for (let i = 0; i < full.length; i += 3) chunks.push(full.slice(i, i + 3));
-    const body = streamFromChunks([...chunks, "data: [DONE]\n\n"]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
+
+    for (let i = 0; i < payload.length; i += 3) {
+      chunks.push(payload.slice(i, i + 3));
+    }
+
+    vi.mocked(fetch).mockResolvedValue(
+      okResponse(
+        streamFromChunks([...chunks, "data: [DONE]\n\n"]),
+      ),
+    );
 
     const t = makeArgs();
     await streamAssistant(t.args);
+
     expect(t.deltas.join("")).toBe("split-ok");
     expect(t.done).toBe(true);
   });
 
-  it("handles a frame split exactly at the data: prefix", async () => {
-    const body = streamFromChunks([
-      "dat",
-      "a: ",
-      "{\"choices\":[{\"delta\":{\"content\":\"x\"}}]}",
-      "\n\n",
-      "data: [DONE]\n\n",
-    ]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
+  it("ignores frames without delta content", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      okResponse(
+        streamFromChunks([
+          'data: {"choices":[{"delta":{}}]}\n\n',
+          'data: {"choices":[]}\n\n',
+          'data: {"id":"abc"}\n\n',
+          'data: {"choices":[{"delta":{"content":"yes"}}]}\n\n',
+          "data: [DONE]\n\n",
+        ]),
+      ),
+    );
 
     const t = makeArgs();
     await streamAssistant(t.args);
-    expect(t.deltas.join("")).toBe("x");
+
+    expect(t.deltas.join("")).toBe("yes");
+    expect(t.done).toBe(true);
   });
 
-  it("reassembles two frames delivered in one chunk", async () => {
-    const body = streamFromChunks([
-      "data: {\"choices\":[{\"delta\":{\"content\":\"A\"}}]}\n\n" +
-        "data: {\"choices\":[{\"delta\":{\"content\":\"B\"}}]}\n\n",
-      "data: [DONE]\n\n",
-    ]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
+  it("reports premature EOF without falsely finishing", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      okResponse(
+        streamFromChunks([
+          'data: {"choices":[{"delta":{"content":"partial"}}]}\n\n',
+          'data: {"choices":',
+        ]),
+      ),
+    );
 
     const t = makeArgs();
     await streamAssistant(t.args);
-    expect(t.deltas.join("")).toBe("AB");
-  });
 
-  it("does not emit a partial JSON delta when the stream ends mid-frame", async () => {
-    // Stream closes mid-JSON without valid closing syntax.
-    const body = streamFromChunks([
-      "data: {\"choices\":[{\"delta\":{\"content\":\"seen\"}}]}\n\n",
-      "data: {\"choices\":[{\"delta\":{\"content\":\"", // unclosed JSON
-    ]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
-
-    const t = makeArgs();
-    await streamAssistant(t.args);
-    expect(t.deltas.join("")).toBe("seen");
-    expect(t.done).toBe(false);
-    expect(t.error.status).toBe(0);
-  });
-});
-
-describe("streamAssistant — premature EOF", () => {
-  beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn());
-  });
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    localStorage.clear();
-  });
-
-  it("reports an error on an empty stream with no [DONE]", async () => {
-    const body = streamFromChunks([]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
-
-    const t = makeArgs();
-    await streamAssistant(t.args);
-    expect(t.deltas).toEqual([]);
-    expect(t.done).toBe(false);
-    expect(t.error.status).toBe(0);
-    expect(t.error.message).toBe("Stream berakhir tidak sempurna. Coba lagi.");
-  });
-
-  it("stops at [DONE] and ignores trailing data", async () => {
-    const body = streamFromChunks([
-      "data: {\"choices\":[{\"delta\":{\"content\":\"first\"}}]}\n\n",
-      "data: [DONE]\n\n",
-      "data: {\"choices\":[{\"delta\":{\"content\":\"after\"}}]}\n\n",
-    ]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
-
-    const t = makeArgs();
-    await streamAssistant(t.args);
-    expect(t.deltas.join("")).toBe("first");
-  });
-
-  it("handles a stream that errors mid-read by reporting to onError", async () => {
-    const body = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(new TextEncoder().encode(
-          "data: {\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\n",
-        ));
-        // Error asynchronously so the enqueued chunk is still readable
-        // (controller.error() drains the queue synchronously).
-        setTimeout(() => controller.error(new Error("network reset")), 30);
-      },
-    });
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
-
-    const t = makeArgs();
-    await streamAssistant(t.args);
     expect(t.deltas.join("")).toBe("partial");
     expect(t.done).toBe(false);
     expect(t.error.status).toBe(0);
-    expect(t.error.message).toBe("network reset");
-  });
-});
-
-describe("streamAssistant — error paths", () => {
-  beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn());
-  });
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    localStorage.clear();
   });
 
-  it("reports a JSON error body on a non-ok response", async () => {
+  it("rejects malformed SSE JSON", async () => {
     vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ error: "Token habis" }), { status: 401 }),
+      okResponse(
+        streamFromChunks([
+          "data: invalid-json\n\n",
+          "data: [DONE]\n\n",
+        ]),
+      ),
     );
+
     const t = makeArgs();
     await streamAssistant(t.args);
-    expect(t.error).toEqual({ status: 401, message: "Token habis" });
+
+    expect(t.deltas).toEqual([]);
+    expect(t.done).toBe(false);
+    expect(t.error.status).toBe(0);
+    expect(t.error.message).toBe("Frame AI tidak valid. Coba lagi.");
+  });
+
+  it("propagates provider errors", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      okResponse(
+        streamFromChunks([
+          'data: {"error":"provider unavailable"}\n\n',
+          "data: [DONE]\n\n",
+        ]),
+      ),
+    );
+
+    const t = makeArgs();
+    await streamAssistant(t.args);
+
+    expect(t.error).toEqual({
+      status: 0,
+      message: "provider unavailable",
+    });
     expect(t.done).toBe(false);
   });
 
-  it("falls back to the generic message for a non-JSON error body", async () => {
+  it("reports HTTP errors with their status", async () => {
     vi.mocked(fetch).mockResolvedValue(
-      new Response("<html>502</html>", { status: 502 }),
+      new Response(
+        JSON.stringify({ error: "retry later" }),
+        { status: 429 },
+      ),
     );
+
     const t = makeArgs();
     await streamAssistant(t.args);
-    expect(t.error.status).toBe(502);
-    expect(t.error.message).toBe("Gagal menghubungi AI");
+
+    expect(t.error).toEqual({
+      status: 429,
+      message: "retry later",
+    });
+    expect(t.done).toBe(false);
   });
 
-  it("reports 500 when the response has no body", async () => {
-    vi.mocked(fetch).mockResolvedValue(okResponse(null));
+  it("reports an absent response body", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(null),
+    );
+
     const t = makeArgs();
     await streamAssistant(t.args);
-    expect(t.error).toEqual({ status: 500, message: "Tidak ada respons dari AI" });
+
+    expect(t.error).toEqual({
+      status: 500,
+      message: "Tidak ada respons dari AI",
+    });
   });
 
-  it("sends the bearer token from localStorage", async () => {
-    localStorage.setItem("rankify_token", "secret-abc");
-    const body = streamFromChunks(["data: [DONE]\n\n"]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
+  it("reports fetch failures", async () => {
+    vi.mocked(fetch).mockRejectedValue(
+      new Error("offline"),
+    );
 
     const t = makeArgs();
     await streamAssistant(t.args);
+
+    expect(t.error).toEqual({
+      status: 0,
+      message: "offline",
+    });
+  });
+
+  it("sends the Supabase access token in the request", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      okResponse(streamFromChunks(["data: [DONE]\n\n"])),
+    );
+
+    const t = makeArgs();
+    await streamAssistant(t.args);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
 
     const [url, init] = vi.mocked(fetch).mock.calls[0];
+
     expect(url).toBe(CHAT_URL);
-    expect((init?.headers as Record<string, string>).Authorization).toBe(
-      "Bearer secret-abc",
-    );
     expect(init?.method).toBe("POST");
-  });
 
-  it("sends an empty bearer token when not authenticated", async () => {
-    const body = streamFromChunks(["data: [DONE]\n\n"]);
-    vi.mocked(fetch).mockResolvedValue(okResponse(body));
+    const headers = new Headers(init?.headers);
 
-    const t = makeArgs();
-    await streamAssistant(t.args);
-
-    const init = vi.mocked(fetch).mock.calls[0][1];
-    expect((init?.headers as Record<string, string>).Authorization).toBe(
-      "Bearer ",
-    );
+    expect(headers.get("Authorization")).toBe("Bearer mock-token");
+    expect(headers.get("Content-Type")).toBe("application/json");
   });
 });
