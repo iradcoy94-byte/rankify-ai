@@ -5,7 +5,7 @@ import type { Student } from "./types";
  * Uses crypto.randomUUID when available, falls back to a Math.random id.
  */
 export function uid(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
   return Math.random().toString(36).slice(2, 11);
@@ -18,15 +18,23 @@ export function uid(): string {
  * Returns a NEW object with isValid + error filled in.
  */
 export function validateStudent(s: Student): Student {
-  const trimmed = s.name?.trim() ?? "";
+  const trimmed = typeof s.name === "string" ? s.name.trim() : "";
   if (!trimmed) {
     return { ...s, isValid: false, error: "Nama kosong" };
   }
-  if (Number.isNaN(s.score)) {
+  if (!Number.isFinite(s.score)) {
     return { ...s, isValid: false, error: "Nilai bukan angka" };
   }
   if (s.score < 0 || s.score > 100) {
     return { ...s, isValid: false, error: "Nilai harus 0–100" };
+  }
+  for (const [value, label] of [[s.pretest, "Pre-test"], [s.posttest, "Post-test"]] as const) {
+    if (value !== undefined && (!Number.isFinite(value) || value < 0 || value > 100)) {
+      return { ...s, isValid: false, error: `${label} harus berupa angka 0–100` };
+    }
+  }
+  if (s.meeting !== undefined && (!Number.isSafeInteger(s.meeting) || s.meeting < 1)) {
+    return { ...s, isValid: false, error: "Pertemuan harus bilangan bulat positif" };
   }
   return { ...s, isValid: true, error: undefined };
 }
@@ -42,9 +50,9 @@ export function applyDenseRanking(students: Student[]): Student[] {
   const invalid = students.filter((s) => !s.isValid);
 
   // Group valid students by class
-  const groups = new Map<string, Student[]>();
+  const groups = new Map<string | undefined, Student[]>();
   for (const s of valid) {
-    const key = (s.className ?? "").trim() || "__none__";
+    const key = (s.className ?? "").trim() || undefined;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(s);
   }

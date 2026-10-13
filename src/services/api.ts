@@ -14,6 +14,13 @@ export interface AuthUser {
   role: UserRole;
 }
 
+export class ApiError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -41,17 +48,20 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     let message = "Request gagal";
     try {
       const data = await response.json();
-      message = data.error ?? message;
+      if (typeof data.error === "string") message = data.error;
     } catch {
       // ignore non-JSON errors
     }
-    throw new Error(message);
+    throw new ApiError(response.status, message);
   }
 
-  return response.json() as Promise<T>;
+  if (response.status === 204) return undefined as T;
+  try { return await response.json() as T; } catch {
+    throw new ApiError(response.status, "Respons server tidak valid");
+  }
 }
 
-function fromApiStudent(row: Student): Student {
+export function fromApiStudent(row: Student): Student {
   return {
     ...row,
     score:
@@ -91,12 +101,22 @@ export const api = {
 
   async listStudents() {
     const data = await request<{ students: Student[] }>("/students");
+    if (!data || !Array.isArray(data.students) || data.students.some(row => !row || typeof row !== "object")) {
+      throw new ApiError(502, "Data siswa tidak valid");
+    }
     return data.students.map(fromApiStudent);
   },
 
   async saveStudents(students: Student[]) {
     return request<{ ok: true }>("/students", {
       method: "POST",
+      body: JSON.stringify({ students }),
+    });
+  },
+
+  async replaceStudents(students: Student[]) {
+    return request<{ ok: true }>("/students", {
+      method: "PUT",
       body: JSON.stringify({ students }),
     });
   },

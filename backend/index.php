@@ -213,12 +213,25 @@ try {
             json_response(['students' => array_map('normalize_student', $rows)]);
         }
 
-        if (count($segments) === 1 && $method === 'POST') {
+        if (count($segments) === 1 && in_array($method, ['POST', 'PUT'], true)) {
             require_teacher($user);
             $body = read_json();
+            if ($method === 'PUT' && (!isset($body['students']) || !is_array($body['students']))) {
+                json_response(['error' => 'Daftar siswa diperlukan untuk penggantian.'], 400);
+            }
             $rows = isset($body['students']) && is_array($body['students']) ? $body['students'] : [$body];
+            $payloads = [];
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    json_response(['error' => 'Setiap siswa harus berupa objek.'], 400);
+                }
+                $payloads[] = student_payload($row);
+            }
             $pdo = db($config);
             $pdo->beginTransaction();
+            if ($method === 'PUT') {
+                $pdo->exec('DELETE FROM students');
+            }
             $stmt = $pdo->prepare(
                 'INSERT INTO students (id, name, score, class_name, meeting, model, pretest, posttest, kind)
                  VALUES (:id, :name, :score, :class_name, :meeting, :model, :pretest, :posttest, :kind)
@@ -227,8 +240,8 @@ try {
                  meeting = VALUES(meeting), model = VALUES(model), pretest = VALUES(pretest),
                  posttest = VALUES(posttest), kind = VALUES(kind)',
             );
-            foreach ($rows as $row) {
-                $stmt->execute(student_payload($row));
+            foreach ($payloads as $payload) {
+                $stmt->execute($payload);
             }
             $pdo->commit();
             json_response(['ok' => true]);
@@ -236,7 +249,8 @@ try {
 
         if (count($segments) === 2 && $method === 'PATCH') {
             require_teacher($user);
-            $payload = student_payload(['id' => $segments[1], ...read_json()]);
+            // The route selects the record; a body id must not retarget PATCH.
+            $payload = student_payload([...read_json(), 'id' => $segments[1]]);
             $stmt = db($config)->prepare(
                 'UPDATE students
                  SET name = :name, score = :score, class_name = :class_name, meeting = :meeting,

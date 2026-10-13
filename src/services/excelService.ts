@@ -98,12 +98,12 @@ function findColGroups(headerRow: unknown[], subHeaderRow: unknown[]): ColGroup[
 
   // For each section, find the next "Nama" col and the "Nilai" col after it
   // by scanning the sub-header row starting from the section's column.
-  for (const { col, section } of sections) {
+  for (const [index, { col, section }] of sections.entries()) {
     let nameCol = -1;
     let valueCol = -1;
 
     // Scan rightward up to the next section (or end of row + 8 cols slack)
-    const scanEnd = Math.min(subHeaderRow.length, col + 10);
+    const scanEnd = Math.min(subHeaderRow.length, sections[index + 1]?.col ?? subHeaderRow.length);
     for (let c = col; c < scanEnd; c++) {
       const s = String(subHeaderRow[c] ?? "").toLowerCase().trim();
       if (s === "nama" || s === "name") { nameCol = c; continue; }
@@ -216,7 +216,8 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
       for (const { section, nameCol, valueCol } of colGroups) {
         const rawName = String(row[nameCol] ?? "").trim();
         const rawValue = row[valueCol];
-        const score = rawValue == null || rawValue === "" ? NaN : Number(rawValue);
+        const value = typeof rawValue === "string" ? rawValue.trim().replace(",", ".") : rawValue;
+        const score = (typeof value === "number" || (typeof value === "string" && value !== "")) ? Number(value) : NaN;
 
         if (!rawName) continue; // skip blank name for this group
 

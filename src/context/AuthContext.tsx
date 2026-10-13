@@ -65,13 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [session]);
 
-  const login = useCallback<AuthCtx["login"]>(async (roleOrEmail, emailOrPassword, passwordArg) => {
+  const login = useCallback<AuthCtx["login"]>(async (roleOrEmail: string, emailOrPassword: string, passwordArg?: string): Promise<{ ok: true } | { ok: false; error: string }> => {
     const role =
       passwordArg === undefined
         ? roleOrEmail.trim().toLowerCase() === CREDENTIALS.siswa.email
           ? "siswa"
           : "guru"
-        : roleOrEmail;
+        : roleOrEmail as Role;
     const email = passwordArg === undefined ? roleOrEmail : emailOrPassword;
     const password = passwordArg === undefined ? emailOrPassword : passwordArg;
 

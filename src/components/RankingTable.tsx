@@ -291,6 +291,7 @@ export function RankingTable({
                       )}
                       <td className="px-3 py-2 text-left">
                         <Input
+                          aria-label={`Nama siswa ${s.name || s.id}`}
                           value={s.name}
                           onChange={(e) =>
                             onUpdate(s.id, { name: e.target.value })
@@ -304,6 +305,7 @@ export function RankingTable({
                         <Input
                           type="number"
                           min={1}
+                          aria-label={`Pertemuan ${s.name || s.id}`}
                           value={s.meeting ?? 1}
                           onChange={(e) =>
                             onUpdate(s.id, {
@@ -322,6 +324,8 @@ export function RankingTable({
                           type="number"
                           min={0}
                           max={100}
+                          aria-label={`Nilai ${s.name || s.id}`}
+                          aria-invalid={!s.isValid}
                           value={Number.isNaN(s.score) ? "" : s.score}
                           onChange={(e) => {
                             const v = e.target.value;
