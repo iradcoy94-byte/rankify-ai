@@ -35,7 +35,7 @@ async function run(chunks: string[]) {
 }
 async function invoke() {
   const callbacks = { onDelta: vi.fn(), onDone: vi.fn(), onError: vi.fn() };
-  await streamAssistant({ messages: [], students: [], ...callbacks });
+  await streamAssistant({ messages: [], ...callbacks });
   return callbacks;
 }
 describe("mock AI SSE", () => {

@@ -69,9 +69,9 @@ export function useStudents(initial: Student[] = []) {
       setPersistedIds(new Set());
       return;
     }
-    assertSupabaseConfigured();
     setIsSyncing(true);
     try {
+      assertSupabaseConfigured();
       const [{ data: period, error: periodError }, { data: classRows, error: classError }] = await Promise.all([
         supabase.from("research_periods").select("id,metrics").eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("classes").select("id,name,kkm,learning_model"),
