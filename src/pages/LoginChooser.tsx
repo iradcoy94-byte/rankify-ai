@@ -6,8 +6,8 @@ import { isSupabaseConfigured } from "@/integrations/supabase/client";
 
 /** Landing at /login — pick which role to sign in as. */
 export default function LoginChooser() {
-  const { session } = useAuth();
-  if (session) return <Navigate to="/" replace />;
+  const { session, mustChangePassword } = useAuth();
+  if (session) return <Navigate to={mustChangePassword ? "/ubah-sandi" : "/"} replace />;
 
   const cards = [
     {

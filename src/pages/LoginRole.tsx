@@ -11,13 +11,13 @@ interface Props {
 }
 
 export default function LoginRole({ role }: Props) {
-  const { session, login } = useAuth();
+  const { session, mustChangePassword, login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (session) return <Navigate to="/" replace />;
+  if (session) return <Navigate to={mustChangePassword ? "/ubah-sandi" : "/"} replace />;
 
   const isGuru = role === "guru" || role === "admin";
   const Icon = role === "siswa" ? UserRound : GraduationCap;
