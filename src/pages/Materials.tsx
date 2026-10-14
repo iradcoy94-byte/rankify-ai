@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Calculator, FileText, Loader2, ShieldCheck, UploadCloud } from "lucide-react";
+import { AlertTriangle, Calculator, FileText, Loader2, ShieldCheck, UploadCloud, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { ExtractedPdfPage } from "@/services/pdfService";
 import { chunkMultiPageDocument, validateMathSyntax } from "@/services/mathRagService";
+import { MathPracticeQuiz } from "@/components/MathPracticeQuiz";
 
 type MaterialRow = { id: string; title: string; review_status: string; created_at: string };
 
@@ -20,6 +21,7 @@ export default function Materials() {
   const [progress, setProgress] = useState("");
   const [busy, setBusy] = useState(false);
   const [materials, setMaterials] = useState<MaterialRow[]>([]);
+  const [previewMaterialTitle, setPreviewMaterialTitle] = useState<string | null>(null);
 
   const loadMaterials = useCallback(async () => {
     const { data, error } = await supabase.from("learning_materials")
@@ -144,10 +146,66 @@ export default function Materials() {
 
       <div className="space-y-3">
         <h3 className="font-semibold">Materi sekolah</h3>
-        {materials.length === 0 ? <p className="text-sm text-muted-foreground">Belum ada materi.</p> : materials.map((material) => <div key={material.id} className="flex items-center justify-between rounded-xl border border-border bg-card/40 px-4 py-3">
-          <div><p className="font-medium">{material.title}</p><p className="text-xs text-muted-foreground">{new Date(material.created_at).toLocaleDateString("id-ID")}</p></div>
-          <span className={`rounded-full px-2.5 py-1 text-xs ${material.review_status === "approved" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>{material.review_status === "approved" ? "Aktif" : "Perlu ditinjau"}</span>
-        </div>)}
+        {materials.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Belum ada materi.</p>
+        ) : (
+          materials.map((material) => (
+            <div
+              key={material.id}
+              className="flex items-center justify-between rounded-xl border border-border bg-card/40 px-4 py-3"
+            >
+              <div>
+                <p className="font-medium">{material.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(material.created_at).toLocaleDateString("id-ID")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5 text-xs"
+                  onClick={() =>
+                    setPreviewMaterialTitle(
+                      material.title === previewMaterialTitle ? null : material.title
+                    )
+                  }
+                >
+                  <Zap className="h-3 w-3 text-amber-500" />
+                  {material.title === previewMaterialTitle ? "Tutup Kuis" : "Uji Kuis AI"}
+                </Button>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs ${
+                    material.review_status === "approved"
+                      ? "bg-success/10 text-success"
+                      : "bg-warning/10 text-warning"
+                  }`}
+                >
+                  {material.review_status === "approved" ? "Aktif" : "Perlu ditinjau"}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+
+        {previewMaterialTitle && (
+          <div className="mt-6 rounded-2xl border border-primary/20 bg-card/60 p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between border-b border-border/50 pb-3">
+              <h4 className="text-sm font-semibold text-foreground">
+                Preview Kuis Latihan AI: {previewMaterialTitle}
+              </h4>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs"
+                onClick={() => setPreviewMaterialTitle(null)}
+              >
+                Tutup Preview
+              </Button>
+            </div>
+            <MathPracticeQuiz initialTopic={previewMaterialTitle} />
+          </div>
+        )}
       </div>
     </section>
   );

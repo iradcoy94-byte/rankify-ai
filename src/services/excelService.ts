@@ -269,3 +269,113 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
     rawRowCount: totalRaw,
   };
 }
+
+export interface ResearchExportRow {
+  nisn?: string;
+  name: string;
+  className: string;
+  model: string;
+  pretest?: number;
+  posttest?: number;
+  nGain?: number;
+  nGainCategory?: string;
+  isTuntas?: boolean;
+}
+
+export interface ResearchClassSummary {
+  className: string;
+  model: string;
+  studentCount: number;
+  avgPretest: number;
+  avgPosttest: number;
+  avgNGain: number;
+  nGainCategory: string;
+  tuntasCount: number;
+  tuntasPercentage: number;
+}
+
+/**
+ * Membuat objek XLSX.WorkBook untuk laporan penelitian skripsi.
+ */
+export function buildResearchWorkbook(
+  summaries: ResearchClassSummary[],
+  studentRows: ResearchExportRow[]
+): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Ringkasan Model Pembelajaran (Tabel Analisis Skripsi)
+  const summaryHeaders = [
+    "Kelas",
+    "Model Pembelajaran",
+    "Jumlah Siswa",
+    "Rata-rata Pre-Test",
+    "Rata-rata Post-Test",
+    "Rata-rata N-Gain (Hake)",
+    "Kategori N-Gain",
+    "Jumlah Siswa Tuntas",
+    "Persentase Ketuntasan (%)",
+  ];
+
+  const summaryData = [
+    summaryHeaders,
+    ...summaries.map((s) => [
+      s.className,
+      s.model,
+      s.studentCount,
+      s.avgPretest,
+      s.avgPosttest,
+      s.avgNGain,
+      s.nGainCategory,
+      s.tuntasCount,
+      `${s.tuntasPercentage}%`,
+    ]),
+  ];
+
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(wb, wsSummary, "Ringkasan Model Pembelajaran");
+
+  // Sheet 2: Data Rinci Nilai & N-Gain Siswa
+  const studentHeaders = [
+    "NISN",
+    "Nama Siswa",
+    "Kelas",
+    "Model Pembelajaran",
+    "Nilai Pre-Test",
+    "Nilai Post-Test",
+    "Skor N-Gain",
+    "Kategori N-Gain",
+    "Status Ketuntasan",
+  ];
+
+  const studentData = [
+    studentHeaders,
+    ...studentRows.map((r) => [
+      r.nisn || "-",
+      r.name,
+      r.className,
+      r.model,
+      r.pretest != null ? r.pretest : "-",
+      r.posttest != null ? r.posttest : "-",
+      r.nGain != null ? r.nGain : "-",
+      r.nGainCategory || "-",
+      r.isTuntas ? "Tuntas" : "Belum Tuntas",
+    ]),
+  ];
+
+  const wsStudents = XLSX.utils.aoa_to_sheet(studentData);
+  XLSX.utils.book_append_sheet(wb, wsStudents, "Data Rinci Siswa & N-Gain");
+
+  return wb;
+}
+
+/**
+ * Mengekspor data penelitian skripsi (komparasi model pembelajaran & N-Gain Hake) ke berkas Excel (.xlsx).
+ */
+export function exportResearchReportToExcel(
+  summaries: ResearchClassSummary[],
+  studentRows: ResearchExportRow[],
+  filename = "Laporan_Penelitian_Rankify_AI.xlsx"
+): void {
+  const wb = buildResearchWorkbook(summaries, studentRows);
+  XLSX.writeFile(wb, filename);
+}

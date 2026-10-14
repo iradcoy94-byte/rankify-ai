@@ -216,6 +216,23 @@ export function AssistantChatSurface({
   );
 }
 
+const MATH_SYMBOLS = [
+  { label: "√x", insert: "\\sqrt{x}" },
+  { label: "x²", insert: "^2" },
+  { label: "xⁿ", insert: "^{n}" },
+  { label: "a/b", insert: "\\frac{a}{b}" },
+  { label: "±", insert: "\\pm" },
+  { label: "π", insert: "\\pi" },
+  { label: "θ", insert: "\\theta" },
+  { label: "≤", insert: "\\le" },
+  { label: "≥", insert: "\\ge" },
+  { label: "≠", insert: "\\ne" },
+  { label: "∫", insert: "\\int" },
+  { label: "∞", insert: "\\infty" },
+  { label: "∑", insert: "\\sum_{i=1}^{n}" },
+  { label: "lim", insert: "\\lim_{x \\to \\infty}" },
+];
+
 function ChatComposer({
   compact,
   fullPage,
@@ -235,6 +252,7 @@ function ChatComposer({
   onAttachmentsChange: (value: ImageAttachment[]) => void;
   onSend: (text: string, images?: ImageAttachment[]) => void;
 }) {
+  const [showMathToolbar, setShowMathToolbar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const canSend = input.trim().length > 0 || attachments.length > 0;
@@ -287,6 +305,24 @@ function ChatComposer({
           ))}
         </div>
       )}
+      {showMathToolbar && (
+        <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-primary/20 bg-background/95 p-2 shadow-sm backdrop-blur-sm animate-in fade-in">
+          <span className="text-[11px] font-semibold text-muted-foreground mr-1">Simbol:</span>
+          {MATH_SYMBOLS.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className="rounded-md border border-border/60 bg-card px-2 py-1 font-mono text-xs font-medium text-foreground transition-all hover:border-primary/50 hover:bg-primary/10 hover:text-primary active:scale-95"
+              onClick={() => {
+                onInputChange(input ? `${input} ${item.insert}` : item.insert);
+              }}
+              title={`Sisipkan ${item.insert}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex items-end gap-2">
         <input
           ref={fileInputRef}
@@ -331,6 +367,18 @@ function ChatComposer({
           aria-label="Ambil gambar"
         >
           <Camera className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant={showMathToolbar ? "secondary" : "outline"}
+          className={fullPage ? "h-11 w-11 rounded-full" : ""}
+          disabled={isLoading}
+          onClick={() => setShowMathToolbar((v) => !v)}
+          aria-label="Simbol Matematika"
+          title="Toolbar simbol matematika & formula LaTeX"
+        >
+          <Calculator className="h-4 w-4" />
         </Button>
         <textarea
           value={input}
