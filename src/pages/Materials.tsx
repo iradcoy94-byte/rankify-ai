@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Loader2, ShieldCheck, UploadCloud } from "lucide-react";
+import { AlertTriangle, Calculator, FileText, Loader2, ShieldCheck, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,25 +8,9 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { ExtractedPdfPage } from "@/services/pdfService";
+import { chunkMultiPageDocument, validateMathSyntax } from "@/services/mathRagService";
 
 type MaterialRow = { id: string; title: string; review_status: string; created_at: string };
-
-function chunkText(text: string, maxLength = 2200) {
-  const paragraphs = text.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
-  const chunks: string[] = [];
-  let current = "";
-  for (const paragraph of paragraphs) {
-    if (current && current.length + paragraph.length > maxLength) {
-      chunks.push(current);
-      current = "";
-    }
-    if (paragraph.length > maxLength) {
-      for (let offset = 0; offset < paragraph.length; offset += maxLength) chunks.push(paragraph.slice(offset, offset + maxLength));
-    } else current += `${current ? "\n\n" : ""}${paragraph}`;
-  }
-  if (current) chunks.push(current);
-  return chunks;
-}
 
 export default function Materials() {
   const { user } = useAuth();
@@ -88,12 +72,13 @@ export default function Materials() {
         review_status: "pending",
       });
       if (materialError) throw materialError;
-      const chunks = pages.flatMap((page) => chunkText(page.text).map((content) => ({
+      const rawChunks = chunkMultiPageDocument(pages);
+      const chunks = rawChunks.map((chunk) => ({
         material_id: materialId,
         school_id: user.schoolId,
-        page_number: page.page,
-        content,
-      })));
+        page_number: chunk.page_number,
+        content: chunk.content,
+      }));
       if (chunks.length === 0) throw new Error("Tidak ada teks materi yang dapat disimpan.");
       const { error: chunksError } = await supabase.from("learning_material_chunks").insert(chunks);
       if (chunksError) throw chunksError;
@@ -126,10 +111,32 @@ export default function Materials() {
         {pages.length > 0 && <>
           <div className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-foreground"><ShieldCheck className="h-4 w-4 text-warning" />Periksa dan koreksi hasil ekstraksi tiap halaman sebelum mengaktifkan materi.</div>
           <div className="max-h-[55vh] space-y-4 overflow-y-auto pr-2">
-            {pages.map((page) => <div key={page.page} className="space-y-2 rounded-xl border border-border/70 bg-background/60 p-3">
-              <div className="flex justify-between text-xs"><Label htmlFor={`page-${page.page}`}>Halaman {page.page}</Label><span className="text-muted-foreground">{page.extraction === "ocr" ? "OCR scan" : "Teks PDF"}</span></div>
-              <Textarea id={`page-${page.page}`} value={page.text} onChange={(event) => updatePage(page.page, event.target.value)} rows={5} />
-            </div>)}
+            {pages.map((page) => {
+              const mathInfo = validateMathSyntax(page.text);
+              return (
+                <div key={page.page} className="space-y-2 rounded-xl border border-border/70 bg-background/60 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <Label htmlFor={`page-${page.page}`}>Halaman {page.page}</Label>
+                    <div className="flex items-center gap-2">
+                      {mathInfo.formulaCount > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                          <Calculator className="h-3 w-3" />
+                          {mathInfo.formulaCount} formula
+                        </span>
+                      )}
+                      {!mathInfo.isValid && (
+                        <span className="inline-flex items-center gap-1 rounded bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive" title={mathInfo.warning}>
+                          <AlertTriangle className="h-3 w-3" />
+                          Sintaks $ tidak seimbang
+                        </span>
+                      )}
+                      <span className="text-muted-foreground">{page.extraction === "ocr" ? "OCR scan" : "Teks PDF"}</span>
+                    </div>
+                  </div>
+                  <Textarea id={`page-${page.page}`} value={page.text} onChange={(event) => updatePage(page.page, event.target.value)} rows={5} />
+                </div>
+              );
+            })}
           </div>
           <Button variant="hero" onClick={() => void saveMaterial()} disabled={busy || !title.trim()}><UploadCloud className="h-4 w-4" />Setujui dan aktifkan materi</Button>
         </>}
@@ -137,10 +144,32 @@ export default function Materials() {
 
       <div className="space-y-3">
         <h3 className="font-semibold">Materi sekolah</h3>
-        {materials.length === 0 ? <p className="text-sm text-muted-foreground">Belum ada materi.</p> : materials.map((material) => <div key={material.id} className="flex items-center justify-between rounded-xl border border-border bg-card/40 px-4 py-3">
-          <div><p className="font-medium">{material.title}</p><p className="text-xs text-muted-foreground">{new Date(material.created_at).toLocaleDateString("id-ID")}</p></div>
-          <span className={`rounded-full px-2.5 py-1 text-xs ${material.review_status === "approved" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>{material.review_status === "approved" ? "Aktif" : "Perlu ditinjau"}</span>
-        </div>)}
+        {materials.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Belum ada materi.</p>
+        ) : (
+          materials.map((material) => (
+            <div
+              key={material.id}
+              className="flex items-center justify-between rounded-xl border border-border bg-card/40 px-4 py-3"
+            >
+              <div>
+                <p className="font-medium">{material.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(material.created_at).toLocaleDateString("id-ID")}
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs ${
+                  material.review_status === "approved"
+                    ? "bg-success/10 text-success"
+                    : "bg-warning/10 text-warning"
+                }`}
+              >
+                {material.review_status === "approved" ? "Aktif" : "Perlu ditinjau"}
+              </span>
+            </div>
+          ))
+        )}
       </div>
     </section>
   );

@@ -5,6 +5,7 @@ import {
   Bot,
   Check,
   ChevronsUpDown,
+  FileSpreadsheet,
   LineChart as LineChartIcon,
   Medal,
   Target,
@@ -42,6 +43,12 @@ import { useStudentsCtx } from "@/context/StudentsContext";
 import type { Student } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { calculateNGain as getNGain } from "@/lib/ranking";
+import { toast } from "sonner";
+import {
+  exportResearchReportToExcel,
+  ResearchClassSummary,
+  ResearchExportRow,
+} from "@/services/excelService";
 
 const KKM = 68;
 
@@ -110,6 +117,70 @@ export default function Analysis() {
     [students, selected],
   );
 
+  const handleExportThesisReport = () => {
+    if (profiles.length === 0) {
+      toast.error("Belum ada data siswa untuk diekspor.");
+      return;
+    }
+
+    const studentRows: ResearchExportRow[] = profiles.map((p) => {
+      const model = p.rows.find((r) => r.model)?.model || "Konvensional";
+      const nisn = p.rows.find((r) => r.nisn)?.nisn;
+      const nGain = getNGain(p.pretest, p.posttest);
+      const nGainCategory = getNGainCategory(nGain);
+      const classKkmVal = classKkm[p.className] ?? KKM;
+      const isTuntas = typeof p.currentScore === "number" && p.currentScore >= classKkmVal;
+
+      return {
+        nisn,
+        name: p.name,
+        className: p.className,
+        model,
+        pretest: p.pretest,
+        posttest: p.posttest,
+        nGain: nGain !== undefined ? Math.round(nGain * 100) / 100 : undefined,
+        nGainCategory,
+        isTuntas,
+      };
+    });
+
+    const classMap = new Map<string, ResearchExportRow[]>();
+    for (const row of studentRows) {
+      const current = classMap.get(row.className) ?? [];
+      current.push(row);
+      classMap.set(row.className, current);
+    }
+
+    const summaries: ResearchClassSummary[] = Array.from(classMap.entries()).map(([clsName, rows]) => {
+      const model = rows[0]?.model || "Konvensional";
+      const studentCount = rows.length;
+      const validPre = rows.filter((r) => typeof r.pretest === "number").map((r) => r.pretest!);
+      const validPost = rows.filter((r) => typeof r.posttest === "number").map((r) => r.posttest!);
+      const validGain = rows.filter((r) => typeof r.nGain === "number").map((r) => r.nGain!);
+
+      const avgPre = validPre.length ? Math.round((validPre.reduce((a, b) => a + b, 0) / validPre.length) * 10) / 10 : 0;
+      const avgPost = validPost.length ? Math.round((validPost.reduce((a, b) => a + b, 0) / validPost.length) * 10) / 10 : 0;
+      const avgGain = validGain.length ? Math.round((validGain.reduce((a, b) => a + b, 0) / validGain.length) * 100) / 100 : 0;
+      const tuntasCount = rows.filter((r) => r.isTuntas).length;
+      const tuntasPercentage = studentCount > 0 ? Math.round((tuntasCount / studentCount) * 100) : 0;
+
+      return {
+        className: clsName,
+        model,
+        studentCount,
+        avgPretest: avgPre,
+        avgPosttest: avgPost,
+        avgNGain: avgGain,
+        nGainCategory: getNGainCategory(avgGain),
+        tuntasCount,
+        tuntasPercentage,
+      };
+    });
+
+    exportResearchReportToExcel(summaries, studentRows);
+    toast.success("Laporan penelitian skripsi berhasil diekspor ke Excel!");
+  };
+
   return (
     <section className="container mt-8 space-y-8 pb-12">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -120,12 +191,25 @@ export default function Analysis() {
             posisi di kelas, posisi gabungan, sampai rekomendasi belajar personal.
           </p>
         </div>
-        <StudentSelector
-          profiles={profiles}
-          selected={selected}
-          selectedKey={selectedKey}
-          onSelect={setSelectedKey}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {profiles.length > 0 && (
+            <Button
+              variant="outline"
+              className="gap-2 border-primary/20 text-xs sm:text-sm font-medium hover:bg-primary/10 hover:text-primary"
+              onClick={handleExportThesisReport}
+              title="Ekspor laporan ringkasan model pembelajaran & N-Gain untuk skripsi/penelitian"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              Ekspor Data Skripsi
+            </Button>
+          )}
+          <StudentSelector
+            profiles={profiles}
+            selected={selected}
+            selectedKey={selectedKey}
+            onSelect={setSelectedKey}
+          />
+        </div>
       </div>
 
       {profiles.length === 0 ? (
