@@ -8,25 +8,9 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { ExtractedPdfPage } from "@/services/pdfService";
+import { chunkMathContent } from "@/services/mathRagService";
 
 type MaterialRow = { id: string; title: string; review_status: string; created_at: string };
-
-function chunkText(text: string, maxLength = 2200) {
-  const paragraphs = text.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
-  const chunks: string[] = [];
-  let current = "";
-  for (const paragraph of paragraphs) {
-    if (current && current.length + paragraph.length > maxLength) {
-      chunks.push(current);
-      current = "";
-    }
-    if (paragraph.length > maxLength) {
-      for (let offset = 0; offset < paragraph.length; offset += maxLength) chunks.push(paragraph.slice(offset, offset + maxLength));
-    } else current += `${current ? "\n\n" : ""}${paragraph}`;
-  }
-  if (current) chunks.push(current);
-  return chunks;
-}
 
 export default function Materials() {
   const { user } = useAuth();
@@ -88,7 +72,7 @@ export default function Materials() {
         review_status: "pending",
       });
       if (materialError) throw materialError;
-      const chunks = pages.flatMap((page) => chunkText(page.text).map((content) => ({
+      const chunks = pages.flatMap((page) => chunkMathContent(page.text).map((content) => ({
         material_id: materialId,
         school_id: user.schoolId,
         page_number: page.page,

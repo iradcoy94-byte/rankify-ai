@@ -1,11 +1,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Copy, KeyRound, Power, RefreshCw, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { Bot, Copy, KeyRound, Power, RefreshCw, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth, type Role } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+
+export type AiTutorStyle = "socratic" | "direct_steps" | "hints_only";
 
 type ClassRow = { id: string; name: string };
 type ProfileRow = { id: string; full_name: string; email: string; role: Role; nisn: string | null; is_active: boolean };
@@ -27,6 +29,7 @@ export default function Administration() {
   const [classId, setClassId] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState(newTemporaryPassword);
   const [defaultKkm, setDefaultKkm] = useState("68");
+  const [aiTutorStyle, setAiTutorStyle] = useState<AiTutorStyle>("socratic");
   const [issuedCredential, setIssuedCredential] = useState<{ email: string; password: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -34,11 +37,15 @@ export default function Administration() {
     const [{ data: classData, error: classError }, { data: profileData, error: profileError }, { data: school, error: schoolError }] = await Promise.all([
       supabase.from("classes").select("id,name").order("name"),
       supabase.from("profiles").select("id,full_name,email,role,nisn,is_active").order("full_name"),
-      supabase.from("schools").select("default_kkm").eq("id", user?.schoolId ?? "").single(),
+      supabase.from("schools").select("default_kkm,ai_tutor_style").eq("id", user?.schoolId ?? "").single(),
     ]);
     if (classError) toast.error(classError.message); else setClasses((classData ?? []) as ClassRow[]);
     if (profileError) toast.error(profileError.message); else setProfiles((profileData ?? []) as ProfileRow[]);
-    if (schoolError) toast.error(schoolError.message); else if (school) setDefaultKkm(String(school.default_kkm));
+    if (schoolError) toast.error(schoolError.message);
+    else if (school) {
+      setDefaultKkm(String(school.default_kkm));
+      if (school.ai_tutor_style) setAiTutorStyle(school.ai_tutor_style as AiTutorStyle);
+    }
   }, [user?.schoolId]);
   useEffect(() => { void load(); }, [load]);
 
@@ -47,7 +54,7 @@ export default function Administration() {
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke("admin-create-user", {
-      body: { email, fullName, role, nisn: role === "siswa" ? nisn : undefined, classId: role === "admin" ? undefined : classId, temporaryPassword },
+        body: { email, fullName, role, nisn: role === "siswa" ? nisn : undefined, classId: role === "admin" ? undefined : classId, temporaryPassword },
       });
       if (error) throw new Error(data?.error ?? error.message);
       setIssuedCredential({ email, password: temporaryPassword });
@@ -81,8 +88,29 @@ export default function Administration() {
     if (error) toast.error(error.message); else toast.success("KKM bawaan sekolah diperbarui.");
   };
 
+  const saveAiTutorStyle = async () => {
+    if (!user?.schoolId) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("schools").update({ ai_tutor_style: aiTutorStyle }).eq("id", user.schoolId);
+      if (error) throw error;
+      toast.success("Kebijakan pedagogi AI sekolah diperbarui.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal memperbarui kebijakan pedagogi AI.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return <section className="container mt-8 max-w-5xl space-y-8 pb-12">
-    <div><span className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3 py-1 text-xs text-primary"><ShieldCheck className="h-3.5 w-3.5" />Administrasi sekolah</span><h2 className="text-3xl font-bold">Kelola akun dan kebijakan sekolah</h2><p className="mt-2 text-sm text-muted-foreground">Setiap akun baru menerima kata sandi sementara dan wajib menggantinya saat masuk pertama kali.</p></div>
+    <div>
+      <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3 py-1 text-xs text-primary">
+        <ShieldCheck className="h-3.5 w-3.5" />Administrasi sekolah
+      </span>
+      <h2 className="text-3xl font-bold">Kelola akun dan kebijakan sekolah</h2>
+      <p className="mt-2 text-sm text-muted-foreground">Setiap akun baru menerima kata sandi sementara dan wajib menggantinya saat masuk pertama kali.</p>
+    </div>
+
     <form onSubmit={createAccount} className="grid gap-4 rounded-2xl border border-border bg-card/50 p-5 md:grid-cols-2">
       <div className="md:col-span-2"><h3 className="flex items-center gap-2 font-semibold"><UserPlus className="h-4 w-4 text-primary" />Buat akun</h3></div>
       <div className="space-y-2"><Label htmlFor="account-name">Nama lengkap</Label><Input id="account-name" value={fullName} onChange={(event) => setFullName(event.target.value)} required /></div>
@@ -93,10 +121,86 @@ export default function Administration() {
       <div className="space-y-2"><Label htmlFor="temporary-password">Kata sandi sementara</Label><div className="flex gap-2"><Input id="temporary-password" value={temporaryPassword} onChange={(event) => setTemporaryPassword(event.target.value)} minLength={10} required /><Button type="button" variant="outline" size="icon" onClick={() => setTemporaryPassword(newTemporaryPassword())} aria-label="Buat kata sandi baru"><KeyRound className="h-4 w-4" /></Button></div></div>
       <Button type="submit" variant="hero" disabled={busy} className="md:col-span-2">{busy ? "Membuat akun..." : "Buat akun dan tugaskan kelas"}</Button>
     </form>
-    {issuedCredential && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/40 bg-success/5 p-4 text-sm"><div><p className="font-semibold">Kredensial sementara untuk {issuedCredential.email}</p><code className="mt-1 block select-all font-mono">{issuedCredential.password}</code><p className="mt-1 text-xs text-muted-foreground">Bagikan secara aman. Pengguna harus menggantinya saat login pertama.</p></div><Button variant="outline" size="sm" onClick={() => { void navigator.clipboard.writeText(issuedCredential.password); toast.success("Kata sandi disalin."); }}><Copy className="h-4 w-4" />Salin</Button></div>}
+
+    {issuedCredential && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/40 bg-success/5 p-4 text-sm">
+      <div>
+        <p className="font-semibold">Kredensial sementara untuk {issuedCredential.email}</p>
+        <code className="mt-1 block select-all font-mono">{issuedCredential.password}</code>
+        <p className="mt-1 text-xs text-muted-foreground">Bagikan secara aman. Pengguna harus menggantinya saat login pertama.</p>
+      </div>
+      <Button variant="outline" size="sm" onClick={() => { void navigator.clipboard.writeText(issuedCredential.password); toast.success("Kata sandi disalin."); }}>
+        <Copy className="h-4 w-4" />Salin
+      </Button>
+    </div>}
+
     <div className="grid gap-6 md:grid-cols-[1fr_2fr]">
-      <div className="space-y-3 rounded-2xl border border-border bg-card/50 p-5"><h3 className="font-semibold">KKM bawaan sekolah</h3><p className="text-xs text-muted-foreground">Guru dapat menetapkan nilai berbeda untuk kelasnya.</p><div className="flex gap-2"><Input type="number" min={0} max={100} value={defaultKkm} onChange={(event) => setDefaultKkm(event.target.value)} /><Button variant="outline" onClick={() => void saveDefaultKkm()}>Simpan</Button></div></div>
-      <div className="overflow-hidden rounded-2xl border border-border bg-card/50"><div className="flex items-center gap-2 border-b border-border p-4 font-semibold"><Users className="h-4 w-4 text-primary" />Akun sekolah ({profiles.length})</div><div className="max-h-96 overflow-auto">{profiles.map((profile) => <div key={profile.id} className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3 text-sm"><div className="min-w-48 flex-1"><p className="font-medium">{profile.full_name || "Nama belum diisi"}</p><p className="text-xs text-muted-foreground">{profile.email}{profile.nisn ? ` · NISN ${profile.nisn}` : ""}</p></div><span className="rounded-full bg-secondary px-2.5 py-1 text-xs capitalize">{profile.role}</span><span className={`text-xs ${profile.is_active ? "text-success" : "text-destructive"}`}>{profile.is_active ? "Aktif" : "Nonaktif"}</span><div className="flex gap-1"><Button variant="outline" size="icon" disabled={busy} onClick={() => void accountAction(profile, "reset-password")} aria-label={`Reset sandi ${profile.email}`} title="Atur ulang kata sandi"><RefreshCw className="h-3.5 w-3.5" /></Button>{profile.id !== user?.id && <Button variant="outline" size="icon" disabled={busy} onClick={() => void accountAction(profile, profile.is_active ? "deactivate" : "reactivate")} aria-label={`${profile.is_active ? "Nonaktifkan" : "Aktifkan"} ${profile.email}`} title={profile.is_active ? "Nonaktifkan akun" : "Aktifkan akun"}><Power className="h-3.5 w-3.5" /></Button>}</div></div>)}</div></div>
+      <div className="space-y-6">
+        <div className="space-y-3 rounded-2xl border border-border bg-card/50 p-5">
+          <h3 className="font-semibold">KKM bawaan sekolah</h3>
+          <p className="text-xs text-muted-foreground">Guru dapat menetapkan nilai berbeda untuk kelasnya.</p>
+          <div className="flex gap-2">
+            <Input type="number" min={0} max={100} value={defaultKkm} onChange={(event) => setDefaultKkm(event.target.value)} />
+            <Button variant="outline" onClick={() => void saveDefaultKkm()}>Simpan</Button>
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-border bg-card/50 p-5">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">Pedagogi Tutor AI</h3>
+          </div>
+          <p className="text-xs text-muted-foreground">Gaya interaksi asisten saat membimbing siswa pada soal matematika.</p>
+          <div className="space-y-2">
+            <select
+              id="ai-tutor-style"
+              aria-label="Pilih gaya pedagogi AI"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={aiTutorStyle}
+              onChange={(e) => setAiTutorStyle(e.target.value as AiTutorStyle)}
+            >
+              <option value="socratic">Sokratik Bertahap (Scaffolding)</option>
+              <option value="direct_steps">Langkah Komputasi Langsung</option>
+              <option value="hints_only">Petunjuk Konsep & Rumus Saja</option>
+            </select>
+            <p className="text-[11px] text-muted-foreground italic">
+              {aiTutorStyle === "socratic" && "Membimbing dengan pertanyaan pemantik bertahap tanpa jawaban instan."}
+              {aiTutorStyle === "direct_steps" && "Menguraikan penurunan rumus dan kalkulasi langkah demi langkah hingga tuntas."}
+              {aiTutorStyle === "hints_only" && "Menyajikan konsep dan formula kunci tanpa menyelesaikan perhitungan akhir."}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => void saveAiTutorStyle()}>
+            Simpan Pedagogi
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card/50">
+        <div className="flex items-center gap-2 border-b border-border p-4 font-semibold">
+          <Users className="h-4 w-4 text-primary" />Akun sekolah ({profiles.length})
+        </div>
+        <div className="max-h-96 overflow-auto">
+          {profiles.map((profile) => (
+            <div key={profile.id} className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3 text-sm">
+              <div className="min-w-48 flex-1">
+                <p className="font-medium">{profile.full_name || "Nama belum diisi"}</p>
+                <p className="text-xs text-muted-foreground">{profile.email}{profile.nisn ? ` · NISN ${profile.nisn}` : ""}</p>
+              </div>
+              <span className="rounded-full bg-secondary px-2.5 py-1 text-xs capitalize">{profile.role}</span>
+              <span className={`text-xs ${profile.is_active ? "text-success" : "text-destructive"}`}>{profile.is_active ? "Aktif" : "Nonaktif"}</span>
+              <div className="flex gap-1">
+                <Button variant="outline" size="icon" disabled={busy} onClick={() => void accountAction(profile, "reset-password")} aria-label={`Reset sandi ${profile.email}`} title="Atur ulang kata sandi">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+                {profile.id !== user?.id && (
+                  <Button variant="outline" size="icon" disabled={busy} onClick={() => void accountAction(profile, profile.is_active ? "deactivate" : "reactivate")} aria-label={`${profile.is_active ? "Nonaktifkan" : "Aktifkan"} ${profile.email}`} title={profile.is_active ? "Nonaktifkan akun" : "Aktifkan akun"}>
+                    <Power className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   </section>;
 }
