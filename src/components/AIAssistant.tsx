@@ -409,6 +409,54 @@ function EmptyAssistantState({
   );
 }
 
+export function MathMessageContent({ text, isUser }: { text: string; isUser: boolean }) {
+  if (!text) return null;
+  if (isUser) {
+    return <span className="block whitespace-pre-wrap">{text}</span>;
+  }
+
+  const displayParts = text.split(/(\$\$[\s\S]*?\$\$)/g);
+
+  return (
+    <div className="space-y-1.5 leading-relaxed">
+      {displayParts.map((part, index) => {
+        if (part.startsWith("$$") && part.endsWith("$$") && part.length >= 4) {
+          const formula = part.slice(2, -2).trim();
+          return (
+            <div
+              key={index}
+              className="my-2 overflow-x-auto rounded-xl border border-primary/20 bg-background/80 p-3 text-center font-mono text-sm tracking-wide text-foreground shadow-sm"
+            >
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-sans">Rumus Matematika</div>
+              <code className="select-all whitespace-pre-wrap break-words">{formula}</code>
+            </div>
+          );
+        }
+
+        const inlineParts = part.split(/(\$[^\$\n]+?\$)/g);
+        return (
+          <span key={index} className="whitespace-pre-wrap">
+            {inlineParts.map((inlinePart, subIndex) => {
+              if (inlinePart.startsWith("$") && inlinePart.endsWith("$") && inlinePart.length >= 3) {
+                const inlineFormula = inlinePart.slice(1, -1);
+                return (
+                  <code
+                    key={subIndex}
+                    className="mx-0.5 rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 font-mono text-[0.88em] font-medium text-foreground select-all"
+                  >
+                    {inlineFormula}
+                  </code>
+                );
+              }
+              return <span key={subIndex}>{inlinePart}</span>;
+            })}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function Bubble({
   role,
   content,
@@ -456,7 +504,7 @@ function Bubble({
                 ))}
               </div>
             )}
-            {text && <span className="block whitespace-pre-wrap">{text}</span>}
+            {text && <MathMessageContent text={text} isUser={isUser} />}
           </div>
         )}
       </div>

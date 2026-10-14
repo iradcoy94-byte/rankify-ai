@@ -179,3 +179,100 @@ export function chunkMathContent(text: string, options: MathChunkOptions = {}): 
   // Final check: pastikan tidak ada chunk kosong dan semua formula dipulihkan
   return chunks.map((c) => c.trim()).filter((c) => c.length > 0);
 }
+
+export interface MathValidationResult {
+  isValid: boolean;
+  formulaCount: number;
+  warning?: string;
+}
+
+/**
+ * Memvalidasi keseimbangan sintaks formula matematika (dollar sign, environment) dalam teks.
+ */
+export function validateMathSyntax(text: string): MathValidationResult {
+  if (!text) return { isValid: true, formulaCount: 0 };
+
+  // Hitung inline dan display math
+  const displayMatches = text.match(/\$\$[\s\S]*?\$\$/g) || [];
+  const textWithoutDisplay = text.replace(/\$\$[\s\S]*?\$\$/g, "");
+  const inlineMatches = textWithoutDisplay.match(/\$([^\$\n]+?)\$/g) || [];
+  const formulaCount = displayMatches.length + inlineMatches.length;
+
+  // Cek jika jumlah karakter '$' ganjil (tanda dollar tidak tertutup)
+  const dollarCount = (text.match(/\$/g) || []).length;
+  if (dollarCount % 2 !== 0) {
+    return {
+      isValid: false,
+      formulaCount,
+      warning: "Tanda dollar ($) tidak seimbang. Ada formula yang belum tertutup.",
+    };
+  }
+
+  // Cek keseimbangan \begin{env} dan \end{env}
+  const begins = (text.match(/\\begin\{([a-zA-Z*]+)\}/g) || []).map((m) => m.slice(7, -1));
+  const ends = (text.match(/\\end\{([a-zA-Z*]+)\}/g) || []).map((m) => m.slice(5, -1));
+  if (begins.length !== ends.length) {
+    return {
+      isValid: false,
+      formulaCount,
+      warning: `Environment LaTeX tidak seimbang (${begins.length} \\begin vs ${ends.length} \\end).`,
+    };
+  }
+
+  return { isValid: true, formulaCount };
+}
+
+export interface MultiPageInput {
+  page: number;
+  text: string;
+}
+
+export interface ChunkedPageOutput {
+  page_number: number;
+  content: string;
+}
+
+/**
+ * Melakukan chunking multi-halaman dengan membawa buffer kontinuitas (cross-page overlap)
+ * jika suatu halaman berakhir tanpa tanda baca final atau di tengah pengerjaan soal/formula.
+ */
+export function chunkMultiPageDocument(
+  pages: MultiPageInput[],
+  options: MathChunkOptions = {}
+): ChunkedPageOutput[] {
+  const result: ChunkedPageOutput[] = [];
+  let carryOverContext = "";
+
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    const pageText = page.text.trim();
+    if (!pageText) continue;
+
+    // Tambahkan carry-over dari halaman sebelumnya jika ada
+    const fullTextForPage = carryOverContext
+      ? `[Lanjutan Halaman ${pages[i - 1].page}]:\n${carryOverContext}\n\n${pageText}`
+      : pageText;
+
+    // Lakukan chunking pada halaman ini
+    const pageChunks = chunkMathContent(fullTextForPage, options);
+    for (const chunk of pageChunks) {
+      result.push({
+        page_number: page.page,
+        content: chunk,
+      });
+    }
+
+    // Periksa apakah halaman ini berakhir di tengah kalimat/formula
+    const endsWithTerminal = /[.!?:]\s*$/.test(pageText) || pageText.endsWith("$$");
+    if (!endsWithTerminal && pageText.length > 50) {
+      // Ambil kalimat atau baris terakhir (maksimal 160 karakter) sebagai buffer kontinuitas
+      const lastLine = pageText.split("\n").filter(Boolean).pop() || "";
+      carryOverContext = lastLine.length > 160 ? lastLine.slice(-160) : lastLine;
+    } else {
+      carryOverContext = "";
+    }
+  }
+
+  return result;
+}
+

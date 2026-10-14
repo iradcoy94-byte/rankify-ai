@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   chunkMathContent,
+  chunkMultiPageDocument,
   containsMathFormulas,
+  validateMathSyntax,
 } from "@/services/mathRagService";
 
 describe("mathRagService — Deteksi Formula Matematika", () => {
@@ -49,11 +51,9 @@ describe("mathRagService — Chunking Matematika & Preservasi Formula", () => {
 
     const chunks = chunkMathContent(text, { maxChunkSize: 400 });
     expect(chunks.length).toBeGreaterThan(1);
-    // Formula harus utuh di salah satu chunk
     const hasFullFormula = chunks.some((c) => c.includes(formula));
     expect(hasFullFormula).toBe(true);
 
-    // Tidak boleh ada chunk yang mengandung pecahan formula yang rusak
     for (const c of chunks) {
       const openDollars = (c.match(/\$/g) || []).length;
       expect(openDollars % 2).toBe(0);
@@ -78,10 +78,75 @@ describe("mathRagService — Chunking Matematika & Preservasi Formula", () => {
     const chunks = chunkMathContent(fullText, { maxChunkSize: 250 });
 
     expect(chunks.length).toBeGreaterThanOrEqual(2);
-    // Pastikan teks dalam chunk tidak kehilangan formula matematika
     const joined = chunks.join(" ");
     expect(joined).toContain("$f(x) = ax^2 + bx + c$");
     expect(joined).toContain("$D = b^2 - 4ac > 0$");
     expect(joined).toContain("$(x-2)(x-3) = 0$");
+  });
+});
+
+describe("mathRagService — Validasi Sintaks Formula", () => {
+  it("memvalidasi teks matematika yang seimbang", () => {
+    const validText = "Selesaikan $2x + 1 = 5$ untuk mendapatkan $$x = 2$$.";
+    const result = validateMathSyntax(validText);
+    expect(result.isValid).toBe(true);
+    expect(result.formulaCount).toBe(2);
+    expect(result.warning).toBeUndefined();
+  });
+
+  it("mendeteksi tanda dollar ganjil yang tidak tertutup", () => {
+    const invalidText = "Hitung nilai dari $x^2 + 4 tanpa penutup dollar.";
+    const result = validateMathSyntax(invalidText);
+    expect(result.isValid).toBe(false);
+    expect(result.warning).toContain("tidak seimbang");
+  });
+
+  it("mendeteksi environment LaTeX yang tidak seimbang", () => {
+    const invalidEnv = "\\begin{matrix} 1 & 2 \\\\ 3 & 4";
+    const result = validateMathSyntax(invalidEnv);
+    expect(result.isValid).toBe(false);
+    expect(result.warning).toContain("Environment LaTeX tidak seimbang");
+  });
+});
+
+describe("mathRagService — Kontinuitas Multi-Halaman (Cross-Page Continuity)", () => {
+  it("membawa buffer kontinuitas ke halaman berikutnya jika halaman berakhir di tengah pengerjaan", () => {
+    const pages = [
+      {
+        page: 1,
+        text: "Contoh Soal 5:\nSebuah peluru ditembakkan ke atas dengan rumus ketinggian $h(t) = -5t^2 + 40t$.\nLangkah pertama tentukan titik balik",
+      },
+      {
+        page: 2,
+        text: "dengan menghitung turunan $h'(t) = -10t + 40 = 0$, sehingga diperoleh $t = 4$ detik.",
+      },
+    ];
+
+    const results = chunkMultiPageDocument(pages, { maxChunkSize: 1000 });
+    expect(results).toHaveLength(2);
+    expect(results[0].page_number).toBe(1);
+    expect(results[1].page_number).toBe(2);
+
+    // Halaman 2 harus memuat header lanjutan halaman 1
+    expect(results[1].content).toContain("[Lanjutan Halaman 1]");
+    expect(results[1].content).toContain("Langkah pertama tentukan titik balik");
+    expect(results[1].content).toContain("$h'(t) = -10t + 40 = 0$");
+  });
+
+  it("tidak membawa carry-over jika halaman sebelumnya diakhiri tanda baca terminal", () => {
+    const pages = [
+      {
+        page: 1,
+        text: "Bab 1: Persamaan Kuadrat telah selesai dibahas.",
+      },
+      {
+        page: 2,
+        text: "Bab 2: Fungsi Eksponen dan Logaritma.",
+      },
+    ];
+
+    const results = chunkMultiPageDocument(pages, { maxChunkSize: 1000 });
+    expect(results).toHaveLength(2);
+    expect(results[1].content).not.toContain("[Lanjutan Halaman 1]");
   });
 });
